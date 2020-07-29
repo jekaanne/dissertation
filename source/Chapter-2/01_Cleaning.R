@@ -1,0 +1,230 @@
+library(tidyverse)
+library(data.table)
+library(dplyr)
+library(here)
+ardraw2 <- fread("data/raw/Survey2-complete.csv", na.strings = c("",NA))
+
+#convert zeros in ttbpn scale to NAs
+ardraw2[aut1 == 0, aut1:=NA]
+ardraw2[aut2 == 0, aut2:=NA]
+ardraw2[aut3 == 0, aut3:=NA]
+ardraw2[aut4 == 0, aut4:=NA]
+ardraw2[aut5 == 0, aut5:=NA]
+ardraw2[aut6 == 0, aut6:=NA]
+ardraw2[rel1 == 0, rel1:=NA]
+ardraw2[rel2 == 0, rel2:=NA]
+ardraw2[rel3 == 0, rel3:=NA]
+ardraw2[rel4 == 0, rel4:=NA]
+ardraw2[rel5 == 0, rel5:=NA]
+ardraw2[rel6 == 0, rel6:=NA]
+ardraw2[com1 == 0, com1:=NA]
+ardraw2[com2 == 0, com2:=NA]
+ardraw2[com3 == 0, com3:=NA]
+ardraw2[com4 == 0, com4:=NA]
+
+# create and label factors####
+library(forcats)
+as_factor(ardraw2$global_disability)
+ardraw2$disability_status <- NA
+ardraw2$disability_status[ardraw2$global_disability == 1] = 0
+ardraw2$disability_status[ardraw2$global_disability == 2] = 1
+ardraw2$disability_status[ardraw2$global_disability == 3] = 1
+ardraw2$disability_status[is.na(ardraw2$global_disability)] <- (0)
+
+
+#SS status variable
+ardraw2$ss_status <- NA
+ardraw2$ss_status[ardraw2$ssi == 1] = 1
+ardraw2$ss_status[ardraw2$ssdi == 1] = 1
+ardraw2$ss_status[is.na(ardraw2$ss_status)] <- (0)
+
+#convert age to age ranges
+ardraw2$age_ranges<-cut(ardraw2$age, breaks=c(0,18,36,51,65), labels = c("18-35", "36-50", "51-65", "65+"))
+
+#create binary white/nonwhite variable
+ardraw2$white <- NA
+ardraw2$white[ardraw2$eth_white == 1] = 1
+ardraw2$white[ardraw2$eth_black == 1] = 0
+ardraw2$white[ardraw2$eth_hispanic == 1] = 0
+ardraw2$white[ardraw2$eth_native_am == 1] = 0
+ardraw2$white[ardraw2$eth_indian == 1] = 0
+ardraw2$white[ardraw2$eth_middle_eastern == 1] = 0
+ardraw2$white[ardraw2$eth_pac_islander == 1] = 0
+ardraw2$white[ardraw2$ethnicity_other == 1] = 0
+
+#binary gender
+ardraw2$bgender <- NA
+ardraw2$bgender[ardraw2$gender == "Female"] <- 1
+ardraw2$bgender[ardraw2$gender == "Male"] <- 0
+ardraw2$bgender <- as.factor(ardraw2$bgender)
+
+#calculate income groups
+ardraw2$hhincome <- as.numeric(ardraw2$hhincome)
+ardraw2$income_range <- NA
+ardraw2$income_range <- cut(ardraw2$hhincome, breaks=c(0,10000,30000,70000,100000),labels = c("<10,000","10,000-30,000", "30,000 - 70,000", "100,000+"))
+
+# replace NAs with zeros in disability variables
+ardraw2[is.na(dis_seeing), dis_seeing:= 0]
+ardraw2[is.na(dis_hearing), dis_hearing:= 0]
+ardraw2[is.na(dis_walking), dis_walking:= 0]
+ardraw2[is.na(dis_cognitive), dis_cognitive:= 0]
+ardraw2[is.na(dis_selfcare), dis_selfcare:= 0]
+ardraw2[is.na(dis_comm), dis_comm:= 0]
+ardraw2[is.na(depression_severity), depression_severity:= 0]
+ardraw2[is.na(anxiety_severity), anxiety_severity:= 0]
+ardraw2[is.na(pain_severity), pain_severity:= 0]
+ardraw2[is.na(fatigue_severity), fatigue_severity:= 0]
+
+# create binary disability variables
+ardraw2$bdis_seeing <- (0)
+ardraw2$bdis_seeing[ardraw2$dis_seeing == 0] = (0)
+ardraw2$bdis_seeing[ardraw2$dis_seeing == 1] = 1
+ardraw2$bdis_seeing[ardraw2$dis_seeing == 2] = 1
+ardraw2$bdis_seeing[ardraw2$dis_seeing == 3] = 1
+ardraw2$bdis_hearing <- (0)
+ardraw2$bdis_hearing[ardraw2$dis_hearing == 0] = (0)
+ardraw2$bdis_hearing[ardraw2$dis_hearing == 1] = 1
+ardraw2$bdis_hearing[ardraw2$dis_hearing == 2] = 1
+ardraw2$bdis_hearing[ardraw2$dis_hearing == 3] = 1
+ardraw2$bdis_walking <- (0)
+ardraw2$bdis_walking[ardraw2$dis_walking == 0] = (0)
+ardraw2$bdis_walking[ardraw2$dis_walking == 1] = 1
+ardraw2$bdis_walking[ardraw2$dis_walking == 2] = 1
+ardraw2$bdis_walking[ardraw2$dis_walking == 3] = 1
+ardraw2$bdis_cognitive <- (0)
+ardraw2$bdis_cognitive[ardraw2$dis_cognitive == 0] = (0)
+ardraw2$bdis_cognitive[ardraw2$dis_cognitive == 1] = 1
+ardraw2$bdis_cognitive[ardraw2$dis_cognitive == 2] = 1
+ardraw2$bdis_cognitive[ardraw2$dis_cognitive == 3] = 1
+ardraw2$bdis_comm <- (0)
+ardraw2$bdis_comm[ardraw2$dis_comm == 0] = (0)
+ardraw2$bdis_comm[ardraw2$dis_comm == 1] = 1
+ardraw2$bdis_comm[ardraw2$dis_comm == 2] = 1
+ardraw2$bdis_comm[ardraw2$dis_comm == 3] = 1
+ardraw2$bdis_selfcare <- (0)
+ardraw2$bdis_selfcare[ardraw2$dis_selfcare == 0] = (0)
+ardraw2$bdis_selfcare[ardraw2$dis_selfcare == 1] = 1
+ardraw2$bdis_selfcare[ardraw2$dis_selfcare == 2] = 1
+ardraw2$bdis_selfcare[ardraw2$dis_selfcare == 3] = 1
+ardraw2$banxiety_severity <- (0)
+ardraw2$banxiety_severity[ardraw2$anxiety_severity == 0] = (0)
+ardraw2$banxiety_severity[ardraw2$anxiety_severity == 1] = 1
+ardraw2$banxiety_severity[ardraw2$anxiety_severity == 2] = 1
+ardraw2$banxiety_severity[ardraw2$anxiety_severity == 3] = 1
+ardraw2$bdepression_severity <- (0)
+ardraw2$bdepression_severity[ardraw2$depression_severity == 0] = (0)
+ardraw2$bdepression_severity[ardraw2$depression_severity == 1] = 1
+ardraw2$bdepression_severity[ardraw2$depression_severity == 2] = 1
+ardraw2$bdepression_severity[ardraw2$depression_severity == 3] = 1
+ardraw2$bpain_severity <- (0)
+ardraw2$bpain_severity[ardraw2$pain_severity == 0] = (0)
+ardraw2$bpain_severity[ardraw2$pain_severity == 1] = 1
+ardraw2$bpain_severity[ardraw2$pain_severity == 2] = 1
+ardraw2$bpain_severity[ardraw2$pain_severity == 3] = 1
+ardraw2$bfatigue_severity <- (0)
+ardraw2$bfatigue_severity[ardraw2$fatigue_severity == 0] = (0)
+ardraw2$bfatigue_severity[ardraw2$fatigue_severity == 1] = 1
+ardraw2$bfatigue_severity[ardraw2$fatigue_severity == 2] = 1
+ardraw2$bfatigue_severity[ardraw2$fatigue_severity == 3] = 1
+
+#conventional control variable
+ardraw2$condis <- (0)
+ardraw2$condis[ardraw2$bdis_walking == 1] <- 1
+ardraw2$condis[ardraw2$bdis_seeing == 1] <- 1
+ardraw2$condis[ardraw2$bdis_hearing == 1] <- 1
+ardraw2$condis[ardraw2$bdis_cognitive == 1] <- 1
+ardraw2$condis[ardraw2$bdis_selfcare == 1] <- 1
+
+# NA's for disability types
+
+alt_disability_status <- dplyr::select(ardraw2, bdis_seeing, bdis_walking, bdis_cognitive, bdis_comm, bdis_selfcare, banxiety_severity, bdepression_severity, bpain_severity, bfatigue_severity)
+alt_disability_status$bdis_seeing <- as.numeric(alt_disability_status$bdis_seeing)
+alt_disability_status$bdis_hearing <- as.numeric(alt_disability_status$bdis_hearing)
+alt_disability_status$bdis_walking <- as.numeric(alt_disability_status$bdis_walking)
+alt_disability_status$bdis_cognitive <- as.numeric(alt_disability_status$bdis_cognitive)
+alt_disability_status$bdis_comm <- as.numeric(alt_disability_status$bdis_comm)
+alt_disability_status$bdis_selfcare <- as.numeric(alt_disability_status$bdis_selfcare)
+alt_disability_status$banxiety_severity <- as.numeric(alt_disability_status$banxiety_severity)
+alt_disability_status$bdepression_severity <- as.numeric(alt_disability_status$bdepression_severity)
+alt_disability_status$bpain_severity <- as.numeric(alt_disability_status$bpain_severity)
+alt_disability_status$bfatigue_severity <- as.numeric(alt_disability_status$bfatigue_severity)
+
+ardraw2$alt_disability_status <- rowSums(alt_disability_status, na.rm = TRUE)
+
+#calculate binary transport impact question
+ardraw2$bimpact_trans <- NA
+ardraw2$bimpact_trans[ardraw2$impact_trans==0] <- 0
+ardraw2$bimpact_trans[ardraw2$impact_trans == 1] = 0
+ardraw2$bimpact_trans[ardraw2$impact_trans == 2] = 1
+ardraw2$bimpact_trans[ardraw2$impact_trans == 3] = 1
+ardraw2$bimpact_trans[ardraw2$impact_trans == 4] = 1
+
+# create scale tables and means 
+ttbpn2 <- dplyr::select(ardraw2, aut1, aut2, aut3, aut4, aut5, aut6, 
+                        rel1, rel2, rel3, rel4, rel5, rel6,
+                        com1, com2, com3, com4)
+aut2 <- dplyr::select(ardraw2, aut2, aut3, aut4, aut5, aut6)
+rel2 <- dplyr::select(ardraw2, rel1, rel2, rel3, rel4, rel5, rel6)
+com2 <- dplyr::select(ardraw2, com1, com2, com3, com4)
+pac2 <- dplyr::select(ardraw2, trans_pac1, trans_pac2, trans_pac3, trans_pac4)
+gse2 <- dplyr::select(ardraw2, gse1, gse2, gse3, gse4)
+discr2 <- dplyr::select(ardraw2, discr1, discr2, discr3, discr4)
+flour2 <- dplyr::select(ardraw2, flour1, flour2, flour3, flour4, flour5, flour6, flour7, flour8)
+# disability scale (10 dis types w/ severities)
+dis_score <- dplyr::select(ardraw2, dis_seeing, dis_hearing, dis_walking, dis_cognitive, dis_comm, dis_selfcare, anxiety_severity, depression_severity, pain_severity , fatigue_severity)
+ardraw2$dis_score <- rowSums(dis_score, na.rm = TRUE)
+ardraw2$dis_score[ardraw2$dis_score == 0] <- NA
+
+
+
+# within-participant mean-score-calculations
+ardraw2$ttbpnmean <- rowMeans(ttbpn2, na.rm = TRUE)
+ardraw2$autmean <- rowMeans(aut2, na.rm = TRUE)
+ardraw2$relmean <- rowMeans(rel2, na.rm = TRUE)
+ardraw2$commean <- rowMeans(com2, na.rm = TRUE)
+ardraw2$pacmean <- rowMeans(pac2, na.rm = TRUE)
+ardraw2$gsemean <- rowMeans(gse2, na.rm = TRUE)
+ardraw2$discrmean <- rowMeans(discr2, na.rm = TRUE)
+ardraw2$flourmean <- rowMeans(flour2, na.rm = TRUE)
+
+# reverse-code discr vars
+ardraw2$discr1 <- 6-ardraw2$discr1
+ardraw2$discr2 <- 6-ardraw2$discr2
+ardraw2$discr3 <- 6-ardraw2$discr3
+ardraw2$discr4 <- 6-ardraw2$discr4
+
+#calculate binary employment status 
+ardraw2$employed <- 0
+ardraw2$employed[ardraw2$emp_ft ==1] <- 1
+ardraw2$employed[ardraw2$emp_pt ==1] <- 1
+
+# label categorical variables
+library(forcats)
+library(dplyr)
+
+ardraw2 <- ardraw2 %>% 
+  dplyr::mutate(ss_status = recode_factor(ss_status, `1` = "SS Beneficiary", `0` = "Disabled Non-Beneficiary"))
+ardraw2 <- ardraw2 %>% 
+  dplyr::mutate(gender = recode_factor(gender, `1` = "Female", `0` = "Male", `2` = "Not specified", `2` = "Not specified", .default ="NA"))
+ardraw2 <- ardraw2 %>%
+  dplyr::mutate(white = recode_factor(white,
+                                      `1` = "White",`0` = "Non-white", .default ="NA"))
+ardraw2 <- ardraw2 %>%
+  dplyr::mutate(education = recode_factor(education,
+                                          `1` = "High school or less",
+                                          `2` = "High school or less",
+                                          `3` = "High school or less",
+                                          `4` = "College", 
+                                          `5` = "College", 
+                                          `6` = "Advanced degree", 
+                                          `7` = "Advanced degree", 
+                                          `8` = "Advanced degree", .default ="NA"))
+
+ardraw2 <- ardraw2 %>% 
+  dplyr::mutate(days_out = dplyr::recode_factor(days_out, `1` = "None", `2` = "1-2 days", `3` = "3-4 days", `4` = "5-6 days", `5` = "7 days", .default ="NA"))
+ardraw2 <- ardraw2 %>% 
+  dplyr::mutate(travel_comp = dplyr::recode_factor(travel_comp,  `4` = "Very often or always", `3` = "Often", `2` = "Sometimes", `1` = "Not very often", `0` = "Never", .default = "NA"))
+ardraw2 <- ardraw2 %>% 
+  dplyr::mutate(transit_available = dplyr::recode_factor(transit_available, `1` = "Yes", `0` = "No",  .default ="<NA>"))
+ardraw2 <- ardraw2 %>% 
+  dplyr::mutate(transit_likely_to_use = dplyr::recode_factor(transit_likely_to_use, `1` = "Very unlikely to use", `2` = "Somewhat unlikely to use", `3` = "Somewhat likely to use", `4` = "Very likely to use",  .default ="<NA>"))
