@@ -3,4 +3,8 @@
 .RData
 .Ruserdata
 **/_archive
+<<<<<<< HEAD
 /output
+=======
+/output
+>>>>>>> 9dbb0febb560db16060266cf94d609fef19162fb
