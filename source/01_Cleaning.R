@@ -3,6 +3,15 @@ library(data.table)
 library(dplyr)
 library(here)
 ardraw2 <- fread("data/raw/Survey2-complete.csv", na.strings = c("",NA))
+ardraw <- fread("data/raw/Survey1-complete.csv", na.strings = c("",NA))
+
+# convert functional limitation types to NA for nondisabled participants
+ardraw$move_physically[ardraw$disability_status == "Nondisabled"] = NA
+ardraw$understand_info[ardraw$disability_status == "Nondisabled"] = NA
+ardraw$see_hear_info[ardraw$disability_status == "Nondisabled"] = NA
+ardraw$be_around_people[ardraw$disability_status == "Nondisabled"] = NA
+ardraw$deal_w_frustration[ardraw$disability_status == "Nondisabled"] = NA
+ardraw$communicate[ardraw$disability_status == "Nondisabled"] = NA
 
 #convert zeros in ttbpn scale to NAs
 ardraw2[aut1 == 0, aut1:=NA]
@@ -23,8 +32,6 @@ ardraw2[com3 == 0, com3:=NA]
 ardraw2[com4 == 0, com4:=NA]
 
 # create and label factors####
-library(forcats)
-as_factor(ardraw2$global_disability)
 ardraw2$disability_status <- NA
 ardraw2$disability_status[ardraw2$global_disability == 1] = 0
 ardraw2$disability_status[ardraw2$global_disability == 2] = 1
@@ -77,54 +84,24 @@ ardraw2[is.na(fatigue_severity), fatigue_severity:= 0]
 
 # create binary disability variables
 ardraw2$bdis_seeing <- (0)
-ardraw2$bdis_seeing[ardraw2$dis_seeing == 0] = (0)
-ardraw2$bdis_seeing[ardraw2$dis_seeing == 1] = 1
-ardraw2$bdis_seeing[ardraw2$dis_seeing == 2] = 1
-ardraw2$bdis_seeing[ardraw2$dis_seeing == 3] = 1
+ardraw2$bdis_seeing[ardraw2$dis_seeing == 1 | ardraw2$dis_seeing == 2 | ardraw2$dis_seeing == 3] = 1
 ardraw2$bdis_hearing <- (0)
-ardraw2$bdis_hearing[ardraw2$dis_hearing == 0] = (0)
-ardraw2$bdis_hearing[ardraw2$dis_hearing == 1] = 1
-ardraw2$bdis_hearing[ardraw2$dis_hearing == 2] = 1
-ardraw2$bdis_hearing[ardraw2$dis_hearing == 3] = 1
+ardraw2$bdis_hearing[ardraw2$dis_hearing == 1 | ardraw2$dis_hearing == 2 | ardraw2$dis_hearing == 3] = 1
 ardraw2$bdis_walking <- (0)
-ardraw2$bdis_walking[ardraw2$dis_walking == 0] = (0)
-ardraw2$bdis_walking[ardraw2$dis_walking == 1] = 1
-ardraw2$bdis_walking[ardraw2$dis_walking == 2] = 1
-ardraw2$bdis_walking[ardraw2$dis_walking == 3] = 1
+ardraw2$bdis_walking[ardraw2$dis_walking == 1 | ardraw2$dis_walking == 2 | ardraw2$dis_walking == 3] = 1
 ardraw2$bdis_cognitive <- (0)
-ardraw2$bdis_cognitive[ardraw2$dis_cognitive == 0] = (0)
-ardraw2$bdis_cognitive[ardraw2$dis_cognitive == 1] = 1
-ardraw2$bdis_cognitive[ardraw2$dis_cognitive == 2] = 1
-ardraw2$bdis_cognitive[ardraw2$dis_cognitive == 3] = 1
+ardraw2$bdis_cognitive[ardraw2$dis_cognitive == 1 | ardraw2$dis_cognitive == 2 | ardraw2$dis_cognitive == 3] = 1
 ardraw2$bdis_comm <- (0)
-ardraw2$bdis_comm[ardraw2$dis_comm == 0] = (0)
-ardraw2$bdis_comm[ardraw2$dis_comm == 1] = 1
-ardraw2$bdis_comm[ardraw2$dis_comm == 2] = 1
-ardraw2$bdis_comm[ardraw2$dis_comm == 3] = 1
+ardraw2$bdis_comm[ardraw2$dis_comm == 1 | ardraw2$dis_comm == 2 | ardraw2$dis_comm == 3] = 1
 ardraw2$bdis_selfcare <- (0)
-ardraw2$bdis_selfcare[ardraw2$dis_selfcare == 0] = (0)
-ardraw2$bdis_selfcare[ardraw2$dis_selfcare == 1] = 1
-ardraw2$bdis_selfcare[ardraw2$dis_selfcare == 2] = 1
-ardraw2$bdis_selfcare[ardraw2$dis_selfcare == 3] = 1
+ardraw2$bdis_selfcare[ardraw2$dis_selfcare == 1 | ardraw2$dis_selfcare == 2 | ardraw2$dis_selfcare == 3] = 1
 ardraw2$banxiety_severity <- (0)
-ardraw2$banxiety_severity[ardraw2$anxiety_severity == 0] = (0)
-ardraw2$banxiety_severity[ardraw2$anxiety_severity == 1] = 1
-ardraw2$banxiety_severity[ardraw2$anxiety_severity == 2] = 1
 ardraw2$banxiety_severity[ardraw2$anxiety_severity == 3] = 1
-ardraw2$bdepression_severity <- (0)
-ardraw2$bdepression_severity[ardraw2$depression_severity == 0] = (0)
-ardraw2$bdepression_severity[ardraw2$depression_severity == 1] = 1
-ardraw2$bdepression_severity[ardraw2$depression_severity == 2] = 1
+ardraw2$bdepression_severity <-(0)
 ardraw2$bdepression_severity[ardraw2$depression_severity == 3] = 1
-ardraw2$bpain_severity <- (0)
-ardraw2$bpain_severity[ardraw2$pain_severity == 0] = (0)
-ardraw2$bpain_severity[ardraw2$pain_severity == 1] = 1
-ardraw2$bpain_severity[ardraw2$pain_severity == 2] = 1
+ardraw2$bpain_severity <-(0)
 ardraw2$bpain_severity[ardraw2$pain_severity == 3] = 1
 ardraw2$bfatigue_severity <- (0)
-ardraw2$bfatigue_severity[ardraw2$fatigue_severity == 0] = (0)
-ardraw2$bfatigue_severity[ardraw2$fatigue_severity == 1] = 1
-ardraw2$bfatigue_severity[ardraw2$fatigue_severity == 2] = 1
 ardraw2$bfatigue_severity[ardraw2$fatigue_severity == 3] = 1
 
 #conventional control variable
@@ -134,6 +111,8 @@ ardraw2$condis[ardraw2$bdis_seeing == 1] <- 1
 ardraw2$condis[ardraw2$bdis_hearing == 1] <- 1
 ardraw2$condis[ardraw2$bdis_cognitive == 1] <- 1
 ardraw2$condis[ardraw2$bdis_selfcare == 1] <- 1
+
+ardraw2$home_sat_mean <- ro
 
 # NA's for disability types
 
@@ -187,11 +166,11 @@ ardraw2$gsemean <- rowMeans(gse2, na.rm = TRUE)
 ardraw2$discrmean <- rowMeans(discr2, na.rm = TRUE)
 ardraw2$flourmean <- rowMeans(flour2, na.rm = TRUE)
 
-# reverse-code discr vars
-ardraw2$discr1 <- 6-ardraw2$discr1
-ardraw2$discr2 <- 6-ardraw2$discr2
-ardraw2$discr3 <- 6-ardraw2$discr3
-ardraw2$discr4 <- 6-ardraw2$discr4
+#convert discr to 5 pt. scale
+ardraw2$disc1 <- (ardraw2$discr1*5)/6
+ardraw2$disc2 <- (ardraw2$discr2*5)/6
+ardraw2$disc3 <- (ardraw2$discr3*5)/6
+ardraw2$disc4 <- (ardraw2$discr4*5)/6
 
 #calculate binary employment status 
 ardraw2$employed <- 0
@@ -199,9 +178,6 @@ ardraw2$employed[ardraw2$emp_ft ==1] <- 1
 ardraw2$employed[ardraw2$emp_pt ==1] <- 1
 
 # label categorical variables
-library(forcats)
-library(dplyr)
-
 ardraw2 <- ardraw2 %>% 
   dplyr::mutate(ss_status = recode_factor(ss_status, `1` = "SS Beneficiary", `0` = "Disabled Non-Beneficiary"))
 ardraw2 <- ardraw2 %>% 
@@ -228,3 +204,8 @@ ardraw2 <- ardraw2 %>%
   dplyr::mutate(transit_available = dplyr::recode_factor(transit_available, `1` = "Yes", `0` = "No",  .default ="<NA>"))
 ardraw2 <- ardraw2 %>% 
   dplyr::mutate(transit_likely_to_use = dplyr::recode_factor(transit_likely_to_use, `1` = "Very unlikely to use", `2` = "Somewhat unlikely to use", `3` = "Somewhat likely to use", `4` = "Very likely to use",  .default ="<NA>"))
+
+#resetting data.table to get rid of "trucol "setalloccol(y) : can't set ALTREP truelength"length issues
+ardraw <- data.table(ardraw)
+ardraw2 <- data.table(ardraw2)
+
