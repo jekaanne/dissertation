@@ -1,4 +1,3 @@
-library(packrat)
 library(data.table)
 library(tidyverse)
 library(xtable)
@@ -10,6 +9,13 @@ library(lavaan)
 library(pander)
 library(psych)
 library(semPlot)
+library(coefficientalpha)
+library(TeachingDemos)
+library(MASS)
+library(ICS)
+
+ardraw <- fread("data/raw/Survey1-complete.csv", na.strings = c("",NA))
+
 # Demographic Data Tables ####
 #create contingency tables for each variable and combine 
 colstable <- data.table(variables = c("Female", "Male", "Not specified", "Non-white", "White", "Advanced degree","College", "High school or less", "<5,000", "5,000 - 12,000", "12,000 - 25,000", "25,000 - 50,000", "50,000-100,000", "100,000+", "Full Time", "Part time", "Unemployed", "Missing"))
@@ -114,14 +120,12 @@ library(apaTables)
 subscales.cor <- apa.cor.table(subscale_means, filename = "subscale-correlations", table.number = 1, show.conf.interval = TRUE, landscape = FALSE)
 subscales.cor
 # create descriptive table of items
-library(psych)
 psych::describe(ttbpn)
 psych::describe(bpnf)
 psych::describe(pac)
 psych::describe(gse)
 psych::describe(disid)
 # test scale alphas  #####
-library(coefficientalpha)
 coefficientalpha::alpha(ttbpn)
 alpha(aut, use="pairwise.complete.obs")
 alpha(rel, use="pairwise.complete.obs")
@@ -148,7 +152,6 @@ scatterplotMatrix(subscale_means[7:9])
            #univariate plots
 result <- mvn(data = ttbpn, mvnTest = "royston", univariatePlot = "histogram")
 
-
 # test w/ normalized data 
 #calculate z scores
 z.ttbpn <-scale(ttbpn)
@@ -157,15 +160,13 @@ mvn(ttbpn)
 #calculate z score for count
 #z.data.p <- scale (X.p)
 #one-sample z.test to see if mean is diff than specified value of pop variability
-library(TeachingDemos)
+
 z.test(na.omit(data$col), mu = 0.5, stdev = squrt(0.08))
 
 #one-sample t-test to estimate population variance
 t.test(data$col, mu = 0.5, alternative = "two.sided", conf.level = 0.95)
 
 # cutoffs for skewness and kurtosis
-library("MASS")
-library("ICS")
 maha1.ttbpn <- sqrt(mahalanobis(ttbpn, colMeans(ttbpn), cov(ttbpn)))
 set.seed(1)
 covmve.ttbpn <- cov.rob(ttbpn)
@@ -180,18 +181,12 @@ plot(maha2.ttbpn, xlab = "index", ylab = "robust Mahalanobis distance",
 abline(h = sqrt(qchisq(0.975, 6)))
 par(mfrow = c(1, 1))
 
-# test disability group differences
-#independent samples t test 
-#assumes variances are not equal between groups by default
-t.test(var ~ group, data = data, na.rm = TRUE, var.equal = TRUE)
-# for a dependent samples t-test (within-subjects) - add "paired = TRUE"
-# corrections: rm outliers of error variance
 
 # 1-factor standardized model w/ MLR ####
 onefactor.cfa <- '
 ttbpn=~ a*aut1 + b*aut2 + c*aut3 + d*aut4 + e*aut5 + f*aut6 +g*rel1 + h*rel2 + i*rel3 + j*rel4 + k*rel5 + l*rel6 + m*com1 + n*com2 + o*com3 + p*com4 + q*com5 + r*com6
 '
-onefactor.fit <- cfa(onefactor.cfa, data = ttbpn, sample.nobs = 286, meanstructure = TRUE, estimator = "MLR")
+onefactor.fit <- cfa(onefactor.cfa, data = ardraw, sample.nobs = 286, meanstructure = TRUE, estimator = "MLR")
 summary(onefactor.fit, fit.measures=TRUE, rsquare=TRUE, standardized=TRUE, ci=TRUE)
 # check mindices for highly correlated items
 modificationindices(onefactor.fit, sort.=TRUE, minimum.value=3)
@@ -214,7 +209,7 @@ aut~~rel
 aut~~com
 rel~~com
 '
-threefactor.fit <- cfa(threefactor.cfa, data = ttbpn, sample.nobs = 286, meanstructure = TRUE, estimator = "MLR")
+threefactor.fit <- cfa(threefactor.cfa, data = ardraw, sample.nobs = 286, meanstructure = TRUE, estimator = "MLR")
 summary(threefactor.fit, fit.measures=TRUE, rsquare=TRUE, standardized=TRUE, ci=TRUE)
 # check mindices for highly correlated items
 modificationindices(threefactor.fit, sort=TRUE, minimum.value=3)
@@ -224,6 +219,10 @@ inspect(threefactor.fit, what = "std")$lambda
 threefactor.residuals <- resid(threefactor.fit, type = "standardized")
 # covariance of residuals
 vcov(threefactor.fit)
+
+
+# chisq test of models 
+anova(onefactor.fit, threefactormod.fit )
 
 # 3- factor modified TTBPN model ####
 threefactormod.cfa <- '
@@ -237,7 +236,7 @@ aut~~rel
 aut~~com
 rel~~com
 '
-threefactormod.fit <- cfa(threefactormod.cfa, data = ttbpn, sample.nobs = 286, meanstructure = TRUE, estimator = "MLR", std.lv=TRUE)
+threefactormod.fit <- cfa(threefactormod.cfa, data = ardraw, sample.nobs = 286, meanstructure = TRUE, estimator = "MLR", std.lv=TRUE)
 # print summary w/ fit statistics
 summary(threefactormod.fit, fit.measures=TRUE, rsquare=TRUE, standardized=TRUE, ci=TRUE)
 # check mindices for highly correlated items
@@ -270,7 +269,7 @@ lavaanPlot(model = threefactormod.fit, node_options = list(shape = "box", fontna
 bpn.onefactor.cfa <- '
 bpnf=~a*aut_f1 + b*aut_f2 + c*aut_f3 + d*aut_f4 + e*rel_f1 + f*rel_f2 + g*rel_f3 + h*rel_f4 + i*com_f1 + j*com_f2 + k*com_f3 + l*com_f4
 '
-bpn.onefactor.fit <- cfa(bpn.onefactor.cfa, data = bpnf, sample.nobs = 286, meanstructure = TRUE, estimator = "MLR")
+bpn.onefactor.fit <- cfa(bpn.onefactor.cfa, data = ardraw, sample.nobs = 286, meanstructure = TRUE, estimator = "MLR")
 summary(bpn.onefactor.fit, fit.measures=TRUE, rsquare=TRUE, standardized=TRUE, ci=TRUE)
 # check mindices for highly correlated items
 modificationindices(bpn.onefactor.fit, sort.=TRUE, minimum.value=3)
@@ -282,7 +281,7 @@ bpn.onefactor.residuals <- resid(bpn.onefactor.fit, type = "standardized")
 vcov(bpn.onefactor.fit)
 
 
-# 3-factor BPN-F model ####
+# 3-factor BPNF model ####
 bpnf.threefactor.cfa <- '
 autf=~ a*aut_f1 + b*aut_f2 + c*aut_f3 + d*aut_f4
 relf=~ e*rel_f1 + f*rel_f2 + g*rel_f3 + h*rel_f4
@@ -294,7 +293,7 @@ comf~~p*relf
 autf~~q*relf
 autf~~r*comf
 '
-bpnf.threefactor.fit <- cfa(bpnf.threefactor.cfa, data = bpnf, sample.nobs = 286, meanstructure = TRUE, estimator = "MLR")
+bpnf.threefactor.fit <- cfa(bpnf.threefactor.cfa, data = ardraw, sample.nobs = 286, meanstructure = TRUE, estimator = "MLR")
 summary(bpnf.threefactor.fit, fit.measures=TRUE, rsquare=TRUE, standardized=TRUE, ci=TRUE)
 # check mindices for highly correlated items
 modificationindices(bpnf.threefactor.fit, sort=TRUE, minimum.value=3)
@@ -305,38 +304,8 @@ bpnf.threefactor.residuals <- resid(bpn.threefactor.fit, type = "standardized")
 # covariance of residuals
 vcov(bpnf.threefactor.fit)
 
-# 3-factor ALT-bpnf model with other scales ####
-alt.bpnf.threefactor.cfa <- '
-pac=~trans_pac1 + trans_pac2 + trans_pac3 + trans_pac4
-gse=~gse1 +gse2 + gse3 +  gse4
-disid=~dis_identity1 + dis_identity2+ dis_identity3 + dis_identity4
-pac~~gse
-pac~~disid
-gse~~disid
-'
-alt.bpnf.threefactor.fit <- cfa(alt.bpnf.threefactor.cfa, data = altbpnfactors, sample.nobs = 168, estimator = "MLR", std.lv=TRUE)
-summary(alt.bpnf.threefactor.fit, fit.measures=TRUE, rsquare=TRUE, standardized=TRUE, ci=TRUE)
-# check mindices for highly correlated items
-modificationindices(alt.bpnf.threefactor.fit, sort=TRUE, minimum.value=3)
-# check loading factors on their own
-inspect(alt.bpnf.threefactor.fit, what = "std")$lambda
-# check residuals (want value < .1)
-alt.bpnf.threefactor.residuals <- resid(alt.bpnf.threefactor.fit, type = "standardized")
-# covariance of residuals
-vcov(alt.bpnf.threefactor.fit)
-# print Table of Factor loadings and parameter estimates
-parameterEstimates(alt.bpnf.threefactor.fit, ci = TRUE,  standardized=TRUE) %>% 
-  filter(op == "=~") %>% 
-  select('Indicator'=rhs, 
-         'Beta'=std.lv, 
-         'SE'=se, 'Z'=z,
-         'P(>|z|)'=pvalue,
-         'CI.Lower'=ci.lower,
-         'CI.Upper'=ci.upper) %>% 
-  kable(digits = 3, format="pandoc", caption="Table X: Factor Loadings")
-#print diagram
-semPaths(alt.bpnf.threefactor.fit, what="paths", whatLabels="par", rotation = 2, label.prop=0.9, edge.label.color = "black", edge.width = 0.5, shapeMan = "rectangle", shapeLat = "ellipse", sizeMan = 3, sizeLat = 3,  curve=2)
-
+#chisq test of model difference
+anova(bpn.onefactor.fit , bpnf.threefactor.fit)
 
 # TTBPN scale validity measures####
 # TTBPN indicator and composite reliability #
@@ -461,100 +430,4 @@ sq.corr.ttbpn
 
 
 
-
-# AUT-BPNF scale validity measures for final ####
-# Define the model
-alt.bpnf.model <- '
-pac=~trans_pac1 + trans_pac2 + trans_pac3 + trans_pac4
-gse=~gse1 +gse2 + gse3 +  gse4
-disid=~dis_identity1 + dis_identity2+ dis_identity3 + dis_identity4
-pac~~gse
-pac~~disid
-gse~~disid
-'
-# Fit the model
-alt.bpnf.fit <- cfa(alt.bpnf.model, data = bpnfalt)
-sl <- standardizedSolution(alt.bpnffit)
-sl <- sl$est.std[sl$op == "=~"]
-names(sl) <- names(bpnfalt)
-sl
-# Compute residual variance of each item
-re <- 1 - sl^2
-# Compute composite reliability
-sum(sl)^2 / (sum(sl)^2 + sum(re))
-# Extract the standardized loading matrix
-loadMatrix <- inspect(fit, "std")$lambda
-# Clear the zero loadings
-loadMatrix[loadMatrix==0] <- NA
-# Calculate mean squared loadings (i.e. AVEs)
-apply(loadMatrix^2,2,mean, na.rm = TRUE)
-
-#pac CR calculation
-pac.model <- 'pac=~trans_pac1 + trans_pac2 + trans_pac3 + trans_pac4'
-pac.fit <- cfa(pac.model, data = bpnfalt, meanstructure = TRUE)
-sl <- standardizedSolution(pac.fit)
-sl <- sl$est.std[sl$op == "=~"]
-names(sl) <- names(pac)
-sl
-# Compute residual variance of each item
-re <- 1 - sl^2
-# calculate AVE for aut
-ave.pac <- (sum(sl^2))/6
-ave.pac
-# Compute composite reliability
-sum(sl)^2 / (sum(sl)^2 + sum(re))
-# Extract the standardized loading matrix
-loadMatrix <- inspect(aut.fit, "std")$lambda
-# Clear the zero loadings
-loadMatrix[loadMatrix==0] <- NA
-# Calculate mean squared loadings (i.e. AVEs)
-apply(loadMatrix^2,2,mean, na.rm = TRUE)
-
-
-#gse CR calculation 
-gse.model <- 'gse=~gse1 +gse2 + gse3 +  gse4'
-gse.fit <- cfa(gse.model, data = bpnfalt)
-sl <- standardizedSolution(gse.fit)
-sl <- sl$est.std[sl$op == "=~"]
-names(sl) <- names(gse)
-sl
-# Compute residual variance of each item
-re <- 1 - sl^2
-# calculate AVE for rel
-alt.ave.rel <- (sum(sl^2))/6
-alt.ave.rel
-# Compute composite reliability
-sum(sl)^2 / (sum(sl)^2 + sum(re))
-# Extract the standardized loading matrix
-loadMatrix <- inspect(gse.fit, "std")$lambda
-# Clear the zero loadings
-loadMatrix[loadMatrix==0] <- NA
-# Calculate mean squared loadings (i.e. AVEs)
-apply(loadMatrix^2,2,mean, na.rm = TRUE)
-
-#disid CR calculation 
-disid.model <- '
-disid=~dis_identity1 + dis_identity2+ dis_identity3 + dis_identity4'
-disid.fit <- cfa(disid.model, data = bpnfalt)
-sl <- standardizedSolution(disid.fit)
-sl <- sl$est.std[sl$op == "=~"]
-names(sl) <- names(disid)
-sl
-# Compute residual variance of each item
-re <- 1 - sl^2
-# calculate AVE for disid
-ave.disid <- (sum(sl^2))/6
-ave.disid
-# Compute composite comiability
-sum(sl)^2 / (sum(sl)^2 + sum(re))
-# Extract the standardized loading matrix
-loadMatrix <- inspect(com.fit, "std")$lambda
-# Clear the zero loadings
-loadMatrix[loadMatrix==0] <- NA
-
-# create mean correlation table and test for discriminant validity by squaring correlation
-altbpn.factors<- altbpnfactors[, c("pacmean", "gsemean", "disidmean")]
-corr.altbpn <- cor(altbpn.factors)
-sq.corr.altbpn <- corr.altbpn^2
-sq.corr.altbpn
 

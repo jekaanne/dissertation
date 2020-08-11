@@ -1,9 +1,102 @@
-# preliminary data fixes/calcs ####
+library(here)
+library(data.table)
+library(sjPlot)
+library(tidyverse)
+library(ggpubr)
+library(rstatix)
+library(gvlma)
+library(nnet)
+comparison_complete <- fread("data/raw/Travel-Diary-Survey.csv", na.strings = c("",NA))
 
-comparison_complete$besttripmood.m[comparison_complete$besttripmood.m == "NaN"] <-NA
-comparison_complete$worsttripmood.m[comparison_complete$worsttripmood.m == "NaN"] <-NA
-comparison_complete$no_trips_mood.m[comparison_complete$no_trips_mood.m == "NaN"] <-NA
-comparison_complete$averagetripmood[comparison_complete$averagetripmood == "NaN"] <-NA
+# preliminary data fixes/calculations ####
+#convert discr to 5 pt. scale
+comparison_complete$disc1 <- (comparison_complete$discr1*5)/6
+comparison_complete$disc2 <- (comparison_complete$discr2*5)/6
+comparison_complete$disc3 <- (comparison_complete$discr3*5)/6
+comparison_complete$disc4 <- (comparison_complete$discr4*5)/6
+comparison_complete[is.na(dis_seeing), dis_seeing:= 0]
+comparison_complete[is.na(dis_hearing), dis_hearing:= 0]
+comparison_complete[is.na(dis_walking), dis_walking:= 0]
+comparison_complete[is.na(dis_cognitive), dis_cognitive:= 0]
+comparison_complete[is.na(dis_selfcare), dis_selfcare:= 0]
+comparison_complete[is.na(dis_comm), dis_comm:= 0]
+comparison_complete[is.na(depression_severity), depression_severity:= 0]
+comparison_complete[is.na(anxiety_severity), anxiety_severity:= 0]
+comparison_complete[is.na(pain_severity), pain_severity:= 0]
+comparison_complete[is.na(fatigue_severity), fatigue_severity:= 0]
+
+# create binary disability variables
+comparison_complete$bdis_seeing <- (0)
+comparison_complete$bdis_seeing[comparison_complete$dis_seeing == 0] = (0)
+comparison_complete$bdis_seeing[comparison_complete$dis_seeing == 1] = 1
+comparison_complete$bdis_seeing[comparison_complete$dis_seeing == 2] = 1
+comparison_complete$bdis_seeing[comparison_complete$dis_seeing == 3] = 1
+comparison_complete$bdis_hearing <- (0)
+comparison_complete$bdis_hearing[comparison_complete$dis_hearing == 0] = (0)
+comparison_complete$bdis_hearing[comparison_complete$dis_hearing == 1] = 1
+comparison_complete$bdis_hearing[comparison_complete$dis_hearing == 2] = 1
+comparison_complete$bdis_hearing[comparison_complete$dis_hearing == 3] = 1
+comparison_complete$bdis_walking <- (0)
+comparison_complete$bdis_walking[comparison_complete$dis_walking == 0] = (0)
+comparison_complete$bdis_walking[comparison_complete$dis_walking == 1] = 1
+comparison_complete$bdis_walking[comparison_complete$dis_walking == 2] = 1
+comparison_complete$bdis_walking[comparison_complete$dis_walking == 3] = 1
+comparison_complete$bdis_cognitive <- (0)
+comparison_complete$bdis_cognitive[comparison_complete$dis_cognitive == 0] = (0)
+comparison_complete$bdis_cognitive[comparison_complete$dis_cognitive == 1] = 1
+comparison_complete$bdis_cognitive[comparison_complete$dis_cognitive == 2] = 1
+comparison_complete$bdis_cognitive[comparison_complete$dis_cognitive == 3] = 1
+comparison_complete$bdis_comm <- (0)
+comparison_complete$bdis_comm[comparison_complete$dis_comm == 0] = (0)
+comparison_complete$bdis_comm[comparison_complete$dis_comm == 1] = 1
+comparison_complete$bdis_comm[comparison_complete$dis_comm == 2] = 1
+comparison_complete$bdis_comm[comparison_complete$dis_comm == 3] = 1
+comparison_complete$bdis_selfcare <- (0)
+comparison_complete$bdis_selfcare[comparison_complete$dis_selfcare == 0] = (0)
+comparison_complete$bdis_selfcare[comparison_complete$dis_selfcare == 1] = 1
+comparison_complete$bdis_selfcare[comparison_complete$dis_selfcare == 2] = 1
+comparison_complete$bdis_selfcare[comparison_complete$dis_selfcare == 3] = 1
+comparison_complete$banxiety_severity <- (0)
+comparison_complete$banxiety_severity[comparison_complete$anxiety_severity == 0] = (0)
+comparison_complete$banxiety_severity[comparison_complete$anxiety_severity == 1] = 1
+comparison_complete$banxiety_severity[comparison_complete$anxiety_severity == 2] = 1
+comparison_complete$banxiety_severity[comparison_complete$anxiety_severity == 3] = 1
+comparison_complete$bdepression_severity <- (0)
+comparison_complete$bdepression_severity[comparison_complete$depression_severity == 0] = (0)
+comparison_complete$bdepression_severity[comparison_complete$depression_severity == 1] = 1
+comparison_complete$bdepression_severity[comparison_complete$depression_severity == 2] = 1
+comparison_complete$bdepression_severity[comparison_complete$depression_severity == 3] = 1
+comparison_complete$bpain_severity <- (0)
+comparison_complete$bpain_severity[comparison_complete$pain_severity == 0] = (0)
+comparison_complete$bpain_severity[comparison_complete$pain_severity == 1] = 1
+comparison_complete$bpain_severity[comparison_complete$pain_severity == 2] = 1
+comparison_complete$bpain_severity[comparison_complete$pain_severity == 3] = 1
+comparison_complete$bfatigue_severity <- (0)
+comparison_complete$bfatigue_severity[comparison_complete$fatigue_severity == 0] = (0)
+comparison_complete$bfatigue_severity[comparison_complete$fatigue_severity == 1] = 1
+comparison_complete$bfatigue_severity[comparison_complete$fatigue_severity == 2] = 1
+comparison_complete$bfatigue_severity[comparison_complete$fatigue_severity == 3] = 1
+
+#conventional control variable
+comparison_complete$condis <- (0)
+comparison_complete$condis[comparison_complete$bdis_walking == 1] <- 1
+comparison_complete$condis[comparison_complete$bdis_seeing == 1] <- 1
+comparison_complete$condis[comparison_complete$bdis_hearing == 1] <- 1
+comparison_complete$condis[comparison_complete$bdis_cognitive == 1] <- 1
+comparison_complete$condis[comparison_complete$bdis_selfcare == 1] <- 1
+
+# ttbpn and altbpnf mean scores
+ttbpn2 <- dplyr::select(comparison_complete, aut2, aut3, aut5, aut6,  rel2, rel3, rel4, rel6, com1, com2, com3, com4)
+comparison_complete$ttbpnmean <- rowMeans(ttbpn2, na.rm = TRUE)
+altbpnf2 <-  dplyr::select(comparison_complete, trans_pac1, trans_pac2, trans_pac3, trans_pac4, gse1, gse2, gse3, gse4,  disc1, disc2, disc3, discr4)
+comparison_complete$altbpnfmean <- rowMeans(altbpnf2, na.rm = TRUE)
+
+# calculate loghhincome 
+comparison_complete$hhincome <- as.numeric(comparison_complete$hhincome)
+comparison_complete$loghhincome <- log(comparison_complete$hhincome)
+comparison_complete$loghhincome[which(comparison_complete$loghhincome=="-Inf")] = NA # get rid of 1 weird case
+
+
 # normalized count variables
 comparison_complete$center.od_totalworst.t <- scale(comparison_complete$od_totalworst.t)
 
@@ -42,16 +135,11 @@ distype2complete <- cbind(discolstable2, distype2table)
 print(distype2complete) %>% 
   kable(digits = 3, format="pandoc", caption="demographics 1")
 
-
-
-
 # correlation matrix ####
 cc.correlates <- dplyr::select(comparison_complete, disability_status, log.hhincome, besttripmood.m, worsttripmood.m, ttbpnmean, altbpnfmean, avg.obsperday, flourmean)
 cc.correlates$disability_status <- as.numeric(cc.correlates$disability_status)
 
-
-#plot 
-library(sjPlot)
+#plot correlation table
 cc.correlates <- data.table(cc.correlates)
 sjp.corr(cc.correlates)
 sjt.corr(cc.correlates)
@@ -66,7 +154,6 @@ skewness(moodflour.resid)
 car::outlierTest(moodflour)
 lmtest::bptest(moodflour)
 summary(moodflour)
-library(gvlma)
 gvlma(moodflour)
 vif(moodflour)
 
@@ -85,9 +172,6 @@ gvlma(flourmood)
 
 summary(lm(worsttripmood.m ~disability_status, data = comparison_complete))
 summary(lm(besttripmood.m ~disability_status, data = comparison_complete))
-
-
-
 
 # RQ2: Do obstacles and delays during daily travel impact mood while traveling?####
 summary(moodobstacles <- lm(averagetripmood ~ od_total, data = comparison_complete))
@@ -164,16 +248,7 @@ ggplot(comparison_complete, aes(o_total.t, fill = disability_status)) +
   facet_grid(disability_status ~ ., margins=TRUE, scales="free_y")
 
 
-#trying out a zero-inflated poisson regression since I gots lots of zeros
-library(pscl)
-library(boot)
-library(MASS)
-library(psych)
-library(foreign)
-library(ggplot2)
-library(lmtest)
-library(boot)
-library(nonnest2)
+
 #numeric dis var
 comparison_complete$n.disstatus <- as.numeric(comparison_complete$disability_status)
 # trying out zero-inflated negative binomial regression cuz my variance is greater than mah mean
@@ -205,7 +280,7 @@ shapiro.test(delay.dis.resid)
 hist(delay.dis.resid)
 qqPlot(delay.dis.resid)
 skewness(delay.dis.resid)
-# test of heteroscedasticity (it's not!!)
+# test of heteroscedasticity 
 gvlma(delay.dis)
 lmtest::bptest(delay.dis)
 summary(delay.dis.resid)
@@ -251,9 +326,6 @@ wlk.obsdelays
 comparison_complete %>% wilcox_effsize(avg.obsdelaysperday ~ disability_status)
 
 #kruskall wallis to 
-library(tidyverse)
-library(ggpubr)
-library(rstatix)
 ggboxplot(simpledatfortt, x = "disability_status", y = "avg.obsdelaysperday")
 wilcox_test(avg.obsdelaysperday ~ disability_status, data = simpledatfortt, alternative = "two.sided", exact = FALSE)
 
@@ -709,8 +781,6 @@ logit.nnet.coef<- coef(logitmodel.obs)
 (exp(logit.nnet.coef)-1)*100
 logit.zvalues <- summary(logitmodel.obs)$coefficients / summary(logitmodel.obs)$standard.errors
 pnorm(abs(logit.zvalues), lower.tail=FALSE)*2
-
-library(nnet)
 nnet.model <- multinom(avgmoodbinary ~ od_total + log.hhincome + disability_status , data=diary_trips_only, na.action = na.omit)
 summary(nnet.model)
 nnet.coef<- coef(nnet.model)
@@ -780,6 +850,4 @@ mlogit(avgmoodbinary ~ 1| b.od_total,
 )
 
 # Incorporating TTBPN scale
-summary(ttbpnmood <- glm(avg.obsperday ~ ttbpnmean + disability_status, data = comparison_complete))
-
-summary(altbpnfmood <- glm(averagetripmood ~ altbpnfmean + avg.obsperday, data = comparison_complete))
+summary(ttbpnmood <- lm(averagetripmood ~ ttbpnmean + altbpnfmean + avg.obsperday + condis + loghhincome, data = comparison_complete))

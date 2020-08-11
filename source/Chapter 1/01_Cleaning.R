@@ -1,5 +1,0 @@
-library(tidyverse)
-library(data.table)
-library(dplyr)
-library(here)
-ardraw <- fread("data/raw/Survey1-complete.csv", na.strings = c("",NA))

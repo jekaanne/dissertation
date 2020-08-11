@@ -508,10 +508,19 @@ gse=~gse1 +gse2 + gse3 +  gse4
 discr=~discr1 + discr2+ discr3 + discr4
 aut~~rel
 aut~~com
+aut~~gse
+aut~~pac
+aut~~discr
 rel~~com
-pac~~gse
-pac~~discr
+rel~~gse
+rel~~pac
+rel~~discr
+com~~gse
+com~~pac
+com~~discr
+gse~~pac
 gse~~discr
+pac~~discr
 '
 fullfactor.fit <- cfa(fullfactor.cfa, data = ardraw2, sample.nobs = 211, meanstructure = TRUE, estimator = "MLR")
 summary(fullfactor.fit, fit.measures=TRUE, rsquare=TRUE, standardized=TRUE, ci=TRUE)
