@@ -2,10 +2,12 @@ library(tidyverse)
 library(data.table)
 library(dplyr)
 library(here)
-ardraw2 <- fread("data/raw/Survey2-complete.csv", na.strings = c("",NA))
-ardraw <- fread("data/raw/Survey1-complete.csv", na.strings = c("",NA))
 
-# convert functional limitation types to NA for nondisabled participants
+# Chapter 2 - 3 ####
+ardraw <- fread("data/raw/Survey1-complete.csv", na.strings = c("",NA))
+ardraw2 <- fread("data/raw/Survey2-complete.csv", na.strings = c("",NA))
+
+# survey 1 cleaning  ###
 ardraw$move_physically[ardraw$disability_status == "Nondisabled"] = NA
 ardraw$understand_info[ardraw$disability_status == "Nondisabled"] = NA
 ardraw$see_hear_info[ardraw$disability_status == "Nondisabled"] = NA
@@ -31,13 +33,15 @@ ardraw2[com2 == 0, com2:=NA]
 ardraw2[com3 == 0, com3:=NA]
 ardraw2[com4 == 0, com4:=NA]
 
-# create and label factors####
-ardraw2$disability_status <- NA
-ardraw2$disability_status[ardraw2$global_disability == 1] = 0
-ardraw2$disability_status[ardraw2$global_disability == 2] = 1
-ardraw2$disability_status[ardraw2$global_disability == 3] = 1
-ardraw2$disability_status[is.na(ardraw2$global_disability)] <- (0)
+# calculate mean score of final model from Ch.2, Survey 1
+ttbpn <- dplyr::select(ardraw, aut3,  aut4, aut5, aut6, rel1, rel2, rel3, rel4, com1, com2, com3, com6)
+ardraw$ttbpnmean <- rowMeans(ttbpn, na.rm = TRUE)
 
+# survey 2 cleaning ###
+# create binary disability status variable
+ardraw2$disability_status[is.na(ardraw2$global_disability)] <- NA
+ardraw2$disability_status[ardraw2$global_disability == 1] = 0
+ardraw2$disability_status[ardraw2$global_disability == 2 | ardraw2$global_disability == 3] = 1
 
 #SS status variable
 ardraw2$ss_status <- NA
@@ -154,23 +158,21 @@ dis_score <- dplyr::select(ardraw2, dis_seeing, dis_hearing, dis_walking, dis_co
 ardraw2$dis_score <- rowSums(dis_score, na.rm = TRUE)
 ardraw2$dis_score[ardraw2$dis_score == 0] <- NA
 
-
-
-# within-participant mean-score-calculations
-ardraw2$ttbpnmean <- rowMeans(ttbpn2, na.rm = TRUE)
-ardraw2$autmean <- rowMeans(aut2, na.rm = TRUE)
-ardraw2$relmean <- rowMeans(rel2, na.rm = TRUE)
-ardraw2$commean <- rowMeans(com2, na.rm = TRUE)
-ardraw2$pacmean <- rowMeans(pac2, na.rm = TRUE)
-ardraw2$gsemean <- rowMeans(gse2, na.rm = TRUE)
-ardraw2$discrmean <- rowMeans(discr2, na.rm = TRUE)
-ardraw2$flourmean <- rowMeans(flour2, na.rm = TRUE)
-
-#convert discr to 5 pt. scale
+#adjust discr to 5 pt. scale
 ardraw2$disc1 <- (ardraw2$discr1*5)/6
 ardraw2$disc2 <- (ardraw2$discr2*5)/6
 ardraw2$disc3 <- (ardraw2$discr3*5)/6
 ardraw2$disc4 <- (ardraw2$discr4*5)/6
+
+# calculate mean score of final model from Ch.2, Survey 2
+ttbpn2 <- dplyr::select(ardraw2, aut2, aut3, aut5, aut6,  rel2, rel3, rel4, rel6, com1, com2, com3, com4)
+ardraw2$ttbpnmean <- rowMeans(ttbpn2, na.rm = TRUE)
+altbpnf2 <-  dplyr::select(ardraw2, trans_pac1, trans_pac2, trans_pac3, trans_pac4, gse1, gse2, gse3, gse4,  disc1, disc2, disc3, disc4)
+ardraw2$altbpnfmean <- rowMeans(altbpnf2, na.rm = TRUE)
+
+# calculate log hhincome
+ardraw2$loghhincome <- log(ardraw2$hhincome)
+ardraw2$loghhincome[which(ardraw2$loghhincome=="-Inf")] = NA # replacing inf w/ NA for one weird case
 
 #calculate binary employment status 
 ardraw2$employed <- 0
@@ -205,7 +207,69 @@ ardraw2 <- ardraw2 %>%
 ardraw2 <- ardraw2 %>% 
   dplyr::mutate(transit_likely_to_use = dplyr::recode_factor(transit_likely_to_use, `1` = "Very unlikely to use", `2` = "Somewhat unlikely to use", `3` = "Somewhat likely to use", `4` = "Very likely to use",  .default ="<NA>"))
 
-#resetting data.table to get rid of "trucol "setalloccol(y) : can't set ALTREP truelength"length issues
+#reset data.table to get rid of "trucol "setalloccol(y) : can't set ALTREP truelength"length issues
 ardraw <- data.table(ardraw)
 ardraw2 <- data.table(ardraw2)
+
+
+
+# Chapter 4 ####
+travel_diary <- fread("data/Travel-Diary-Survey.csv", na.strings = c("",NA))
+# travel diary cleaning #
+#convert discr to 5 pt. scale
+travel_diary$disc1 <- (travel_diary$discr1*5)/6
+travel_diary$disc2 <- (travel_diary$discr2*5)/6
+travel_diary$disc3 <- (travel_diary$discr3*5)/6
+travel_diary$disc4 <- (travel_diary$discr4*5)/6
+
+
+# ttbpn, altbpnf, flourishing mean scores
+ttbpn2 <- dplyr::select(travel_diary, aut2, aut3, aut5, aut6,  rel2, rel3, rel4, rel6, com1, com2, com3, com4)
+travel_diary$ttbpnmean <- rowMeans(ttbpn2, na.rm = TRUE)
+
+
+altbpnf2 <-  dplyr::select(travel_diary, trans_pac1, trans_pac2, trans_pac3, trans_pac4, gse1, gse2, gse3, gse4,  disc1, disc2, disc3, discr4)
+travel_diary$altbpnfmean <- rowMeans(altbpnf2, na.rm = TRUE)
+
+
+flour2 <- dplyr::select(travel_diary, flour1, flour2, flour3, flour4, flour5, flour6, flour7, flour8)
+travel_diary$flourmean <- rowMeans(flour2, na.rm = TRUE)
+
+# calculate loghhincome 
+travel_diary$hhincome <- as.numeric(travel_diary$hhincome)
+travel_diary$loghhincome <- log(travel_diary$hhincome)
+travel_diary$loghhincome[which(travel_diary$loghhincome=="-Inf")] = NA # get rid of 1 weird case
+
+# create binary disability status variable
+travel_diary$disability_status[is.na(travel_diary$global_disability)] <- NA
+travel_diary$disability_status[travel_diary$global_disability == 1] = 0
+travel_diary$disability_status[travel_diary$global_disability == 2 | travel_diary$global_disability == 3] = 1
+# remove disability status = NA
+travel_diary <- travel_diary[!is.na(travel_diary$disability_status)]
+
+travel_diary$trips <- as.numeric(travel_diary$trips)
+travel_diary$od_total <- as.numeric(travel_diary$od_total)
+travel_diary$averagetripmood <- rowMeans(travel_diary[,c("besttripmood.m", "worsttripmood.m")], na.rm = TRUE)
+travel_diary$od_total<- rowSums(travel_diary[, c("od_totalworst.t", "od_totalbest.t")], na.rm = TRUE)
+#avg obs per active day
+travel_diary$avg.obsperday <- travel_diary$o_total/travel_diary$trips
+#avg delays per active day
+travel_diary$avg.delaysperday <- travel_diary$d_total/travel_diary$trips
+#avg obs delays per active day
+travel_diary$avg.obsdelaysperday <- (travel_diary$o_total + travel_diary$d_total)/travel_diary$trips
+
+
+# calculate average trip mood
+travel_diary$averagetripmood <- rowMeans(travel_diary[,c("besttripmood.m", "worsttripmood.m")], na.rm = TRUE)
+travel_diary$od_total<- rowSums(travel_diary[, c("od_totalworst.t", "od_totalbest.t")], na.rm = TRUE)
+
+#rename anon email to id
+travel_diary$id <- travel_diary$email
+travel_diary$email <- NULL
+
+# set index group for group analysis
+travel_diary <- travel_diary  %>% mutate(disabled = recode_factor(disability_status,  `1` = "Disabled", `0` = "Nondisabled"))
+
+#remove one case w/ no trip data at all
+travel_diary<- travel_diary[-c(3),]
 

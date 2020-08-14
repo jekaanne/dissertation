@@ -25,17 +25,13 @@ distable5<-table(ardraw$dis_chronic_condition)
 distable6<-table(ardraw$dis_mental_health)
 # join tables together
 distable<- data.table(rbind(distable1, distable2, distable3, distable4, distable5, distable6))
-#create proportions of rows - change margins = 2 if column proportions are preferred
-#dis_proportions <- prop.table(as.matrix(distable), margin=2)*100 , round(dis_proportions, 2)
 #combine variables with individual contingency tables
 discomplete <- cbind(discolstable1, distable)
 #print(xtable(democomplete), type="latex", comment=FALSE)
 print(discomplete) %>% 
   kable(digits = 3, format="pandoc", caption="demographics 1")
 
-
 # by FL Type
-
 distypecolstable1 <- data.table(variables = c("Move Physically",  "", "Understand Information", "", "See or Hear Information", "", "Be Around People", "", "Deal with Frustration", "", "Communicate", ""))
 distypetable1<-table(ardraw$move_physically)
 distypetable2<-table(ardraw$dis_understand_info)
@@ -54,8 +50,6 @@ distypecomplete <- cbind(distypecolstable1, distypetable)
 #print(xtable(democomplete), type="latex", comment=FALSE)
 print(distypecomplete) %>% 
   kable(digits = 3, format="pandoc", caption="demographics 1")
-
-
 
 # SURVEY2 dis types mean ttbpn score 
 discolstable2 <- data.table(variables = c("Seeing", "Hearing", "Walking", "Remembering or Concentrating", "Self-Care", "Communicating", "Severe Depression", "Severe Anxiety", "Severe Pain",  "Severe Fatigue"))
@@ -76,18 +70,7 @@ distype2complete <- cbind(discolstable2, distype2table)
 #print(xtable(democomplete), type="latex", comment=FALSE)
 print(distype2complete) %>% 
   kable(digits = 3, format="pandoc", caption="demographics 1")
-# preliminary calculations  ####
-# calculate mean score of final model from Ch.2, Survey 1
-ttbpn <- dplyr::select(ardraw, aut3,  aut4, aut5, aut6, rel1, rel2, rel3, rel4, com1, com2, com3, com6)
-ardraw$ttbpnmean <- rowMeans(ttbpn, na.rm = TRUE)
 
-# calculate mean score of final model from Ch.2, Survey 2
-ttbpn2 <- dplyr::select(ardraw2, aut2, aut3, aut5, aut6,  rel2, rel3, rel4, rel6, com1, com2, com3, com4)
-ardraw2$ttbpnmean <- rowMeans(ttbpn2, na.rm = TRUE)
-altbpnf2 <-  dplyr::select(ardraw2, trans_pac1, trans_pac2, trans_pac3, trans_pac4, gse1, gse2, gse3, gse4,  disc1, disc2, disc3, disc4)
-ardraw2$altbpnfmean <- rowMeans(altbpnf2, na.rm = TRUE)
-ardraw2$loghhincome <- log(ardraw2$hhincome)
-ardraw2$loghhincome[which(ardraw2$loghhincome=="-Inf")] = NA # replacing inf w/ NA for one weird case
 
 # RQ1a: What are the relationships between transportation barriers, fulfillment of basic psychological needs, and well-being? ####
 
@@ -137,7 +120,6 @@ modelvars.c$altbpnfmean.c <- c(scale(modelvars.c$altbpnfmean, center=TRUE, scale
 
 # mediator model
 summary(model.m <- lm(altbpnfmean.c ~ ttbpnmean.c + loghhincome, data = modelvars.c, subset = -c(38, 153)))
-summary(model.m.beta <- lm.beta(model.m))
 apa.reg.table(model.m, filename="output/Ch3-H1b.1.doc")
 
 # outcome model
@@ -145,8 +127,7 @@ summary(model.y <- lm(flourmean ~ ttbpnmean.c + altbpnfmean.c + loghhincome, dat
 apa.reg.table(model.y, filename="output/Ch3-H1b.2.doc")
 
 # mediation & outcome for ACME/ADE/total effect/proportion mediated
-summary(out.model <- mediate(model.m, model.y, treat="ttbpnmean.c", mediator="altbpnfmean.c", boot = FALSE))
-summary(out.model.boot <- mediate(model.m, model.y, treat="ttbpnmean.c", mediator="altbpnfmean.c"))
+summary(out.model <- mediate(model.m, model.y, treat="ttbpnmean.c", mediator="altbpnfmean.c", boot = TRUE, boot.ci.type = "bca"))
 plot(out.model)
 #sensitivity analysis
 summary(sens.cont <- medsens(out.model, rho.by = 0.05))
@@ -154,6 +135,19 @@ plot(sens.cont, sens.par = "rho")
 plot(sens.cont, sens.par = "R2", r.type = "total", sign.prod = "negative")
 
 #RQ1c To what degree does disability impact the relationship? ####
+
+#Regressing disability status on variables of of interest
+summary(ttbpndis <- lm(ttbpnmean ~ disability_status + loghhincome, data = modelvars.c))
+summary(lm(altbpnfdis <- lm(altbpnfmean ~ disability_status + loghhincome, data = modelvars.c)))
+summary(lm(flourdis <- lm(flourmean ~ disability_status + loghhincome, data = modelvars.c)))
+apa.reg.table(ttbpndis, filename = NA)
+apa.reg.table(altbpnfdis, filename = NA)
+apa.reg.table(flourdis, filename = NA)
+
+# c-path estimate
+summary(dis.model <- lm(flourmean ~ ttbpnmean + loghhincome + disability_status, data = modelvars.c, subset = -c(38, 153))) # -2 inf outliers 
+
+
 # mediator model
 summary(model.m.dis <- lm(altbpnfmean.c ~ ttbpnmean.c*disability_status + loghhincome, data = modelvars.c, subset = -c(38, 153)))
 apa.reg.table(model.m.dis, filename="output/Ch3-H1c.1.doc")
@@ -164,17 +158,23 @@ summary(model.y.dis <- lm(flourmean ~ ttbpnmean.c*disability_status + altbpnfmea
 apa.reg.table(model.y.dis, filename="output/Ch3-H1c.2.doc")
 
 # mediation & outcome for ACME/ADE/total effect/proportion mediated
-summary(out.model.dis <- mediate(model.m.dis, model.y.dis, treat="ttbpnmean.c", mediator="altbpnfmean.c", sims = 1000, boot = TRUE, boot.ci.type = "bca"))
+summary(out.model.2 <- mediate(model.m.dis, model.y.dis, treat="ttbpnmean.c", mediator="altbpnfmean.c",sims = 1000, boot = TRUE, boot.ci.type = "bca"))
+plot(out.model.2)
+
 plot(out.model.dis)
+# for disabled participants
+summary(out.model.dis <- mediate(model.m.dis, model.y.dis, treat="ttbpnmean.c", mediator="altbpnfmean.c", covariates = list("disability_status" = 1), conf.level = .984, sims = 1000, boot = TRUE, boot.ci.type = "bca"))
+plot(out.model.dis)
+
+# for nondisabled participants
+summary(out.model.nondis <- mediate(model.m.dis, model.y.dis, treat="ttbpnmean.c", mediator="altbpnfmean.c", covariates = list(disability_status= 0),sims = 1000, boot = TRUE, boot.ci.type = "perc"))
+plot(out.model.nondis)
 
 #sensitivity analysis
 summary(sens.cont.dis <- medsens(out.model.dis, rho.by = 0.05))
 plot(sens.cont.dis, sens.par = "rho")
 plot(sens.cont.dis, sens.par = "R2", r.type = "total", sign.prod = "negative")
 
-# calculate difference in ACME based on disability status
-#disabled - nondisabled
-test.modmed(out.model.dis, covariates.1 = list(disability_status = 1), covariates.2 = list(disability_status = 0))
 
 
 #RQ2 - Which disability types are associated w/ transportation barriers? ####
