@@ -4,8 +4,8 @@ library(dplyr)
 library(here)
 
 # Chapter 2 - 3 ####
-ardraw <- fread("data/raw/Survey1-complete.csv", na.strings = c("",NA))
-ardraw2 <- fread("data/raw/Survey2-complete.csv", na.strings = c("",NA))
+ardraw <- fread("data/Survey1-complete.csv", na.strings = c("",NA))
+ardraw2 <- fread("data/Survey2-complete.csv", na.strings = c("",NA))
 
 # survey 1 cleaning  ###
 ardraw$move_physically[ardraw$disability_status == "Nondisabled"] = NA
@@ -169,6 +169,8 @@ ttbpn2 <- dplyr::select(ardraw2, aut2, aut3, aut5, aut6,  rel2, rel3, rel4, rel6
 ardraw2$ttbpnmean <- rowMeans(ttbpn2, na.rm = TRUE)
 altbpnf2 <-  dplyr::select(ardraw2, trans_pac1, trans_pac2, trans_pac3, trans_pac4, gse1, gse2, gse3, gse4,  disc1, disc2, disc3, disc4)
 ardraw2$altbpnfmean <- rowMeans(altbpnf2, na.rm = TRUE)
+flour2 <- dplyr::select(ardraw2, flour1, flour2, flour3, flour4, flour5, flour6, flour7, flour8)
+ardraw2$flourmean <- rowMeans(flour2, na.rm = TRUE)
 
 # calculate log hhincome
 ardraw2$loghhincome <- log(ardraw2$hhincome)

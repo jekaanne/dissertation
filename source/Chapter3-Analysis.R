@@ -12,7 +12,8 @@ library(ggplot2) #Data visualizations
 library(lmtest) #Testing linear regression models
 library(lavaan) #LAtent VAriable ANalysis
 library(gvlma) #Test assumptions of regression
-
+library(broom)
+library(pixiedust)
 # Participant disability tables ####
 # S1
 discolstable1 <- data.table(variables = c("Physical",  "", "Blind/Low-Vision", "", "Deaf/Hard of Hearing", "", "Developmental", "", "Chronic Condition", "", "Mental Health", ""))
@@ -85,11 +86,13 @@ tab_corr(ardraw2.correlates)
 
 
 # selecting variables and dropping incomplete cases
-modelvars <- model.vars[!is.na(ardraw2.correlates$disability_status)]
+model.vars <- dplyr::select(ardraw2, flourmean, disability_status, ttbpnmean, altbpnfmean, loghhincome)
+modelvars <- model.vars[!is.na(model.vars$disability_status)]
 modelvars.c <- modelvars[!is.na(modelvars$loghhincome)]
 
 #simple linear regression TTBPN --> FLOUR
 summary(lmtest0 <- lm(flourmean ~ ttbpnmean + loghhincome, data = modelvars.c, subset = -c(38, 153))) # -2 inf outliers 
+summary.lm(lmtest0, )
 lmtest0.resid <- residuals(lmtest0) 
 shapiro.test(lmtest0.resid) # numeric test of normality
 hist(lmtest0.resid) # visual test of normality
@@ -98,6 +101,14 @@ qqPlot(lmtest0.resid) # test for influential residual outliers (extracting 2 cas
 gvlma(lmtest0) #test of regression assumptions
 ncvTest(lmtest0) # non-constant error variance test (homoscedasticity)
 lmtest::bptest(lmtest0)
+
+#export table
+reg0 <- tidy(lmtest0, conf.int = TRUE, conf.level = .01)
+reg0 %>% relocate(p.value, .after = last_col())
+dust(reg0) %>% sprinkle(cols = c("estimate", "std.error", "statistic", "conf.low", "conf.high"), round = 2) %>%  sprinkle(cols = "p.value", fn = quote(pvalString(value))) %>% sprinkle_colnames(term = "", estimate = "b", conf.low = "LL", conf.high = "UL", std.error = "SE", statistic = "t", p.value = "P-value") %>% sprinkle(cols = "term", replace = c("(Intercept)", "TTBPN", "Income"))
+
+reg0.mod <- glance(lmtest0)
+dust(reg0.mod) %>% sprinkle(cols = c("adj.r.squared", "p.value", "statistic", "df"), round = 2) %>% sprinkle_colnames(adj.r.squared = "Adj. R2", statistic = "F", df = "DF", p.value = "P-value")
 
 # adding alt-bpnf
 summary(lmtest1 <- lm(flourmean ~ ttbpnmean + altbpnfmean + loghhincome, data = modelvars.c, subset = -c(38, 153)))
@@ -110,7 +121,9 @@ gvlma(lmtest1) #test of regression assumptions
 ncvTest(lmtest1) # non-constant error variance test (homoscedasticity)
 lmtest::bptest(lmtest1)
 
-apa.reg.table(lmtest0, lmtest1,filename="output/Ch3-H1a.doc")
+# export output to table
+tab_model(lmtest0, lmtest1, show.intercept = TRUE, show.se = TRUE, show.ci = .95, show.r2 = TRUE, show.stat = TRUE, auto.label = FALSE, show.p = .01, collapse.ci = FALSE, show.std = TRUE, show.fstat = TRUE, digits = 2, digits.p = 3,col.order = c("est", "ci", "se", "std.est",  "p"), pred.labels = c("Intercept", "TTBPN", "Income", "ALT-BPNF"), dv.labels = c("First Model", "Second Model"), string.pred = "Predictor", string.ci = "95% CI", string.p = "p", string.est = "b", string.se = "SE", string.std = "Beta" )
+
 
 #RQ1b: Is the  relationship between transportation barriers and wellbeing mediated by fulfillment of basic psychological needs?  ####
 #psych package mediation/moderation
@@ -119,7 +132,7 @@ modelvars.c$ttbpnmean.c <- c(scale(modelvars.c$ttbpnmean, center=TRUE, scale=FAL
 modelvars.c$altbpnfmean.c <- c(scale(modelvars.c$altbpnfmean, center=TRUE, scale=FALSE))
 
 # mediator model
-summary(model.m <- lm(altbpnfmean.c ~ ttbpnmean.c + loghhincome, data = modelvars.c, subset = -c(38, 153)))
+summary(model.m <- predict.lm(altbpnfmean.c ~ ttbpnmean.c + loghhincome, data = modelvars.c, subset = -c(38, 153)))
 apa.reg.table(model.m, filename="output/Ch3-H1b.1.doc")
 
 # outcome model

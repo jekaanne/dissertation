@@ -1,3 +1,4 @@
+library(here)
 library(data.table)
 library(tidyverse)
 library(xtable)
@@ -13,8 +14,10 @@ library(coefficientalpha)
 library(TeachingDemos)
 library(MASS)
 library(ICS)
-
-ardraw <- fread("data/raw/Survey1-complete.csv", na.strings = c("",NA))
+library(MVN)
+library(car)
+library(BaylorEdPsych)
+library (mvnmle)
 
 # Demographic Data Tables ####
 #create contingency tables for each variable and combine 
@@ -126,61 +129,14 @@ psych::describe(pac)
 psych::describe(gse)
 psych::describe(disid)
 # test scale alphas  #####
-coefficientalpha::alpha(ttbpn)
-alpha(aut, use="pairwise.complete.obs")
-alpha(rel, use="pairwise.complete.obs")
-alpha(com, use="pairwise.complete.obs")
-alpha(bpn_f, use="pairwise.complete.obs")
-alpha(pac, use="pairwise.complete.obs")
-alpha(gse, use = "pairwise.complete.obs")
-alpha(disid, use = "pairwise.complete.obs")
-alpha(flour, use = "pairwise.complete.obs")
-
-# assumptions/normality ####
-# univariate normality
-# boxplots
-boxplot(ardraw$ttbpnmean ~ ardraw$disability_status, ylab="Score", col=c("red", "blue"), main="Boxplot of scores in 3 groups")
-
-# checking for multivariate normal #
-library(MVN)
-mvn(ttbpn, mvnTest = c("mardia", "hz", "royston", "dh", "energy"), covariance = TRUE, tol = 1e-25, alpha = 0.5, scale = FALSE, desc = TRUE, transform = "none", univariateTest = c("SW", "CVM", "Lillie", "SF", "AD"), univariatePlot = "none", multivariatePlot = "none",  multivariateOutlierMethod = "none", bc = FALSE, bcType = "rounded", showOutliers = TRUE, showNewData = TRUE)
-library(BaylorEdPsych)
-library (mvnmle)
-LittleMCAR(ardraw2factors)
-library(car)
-scatterplotMatrix(subscale_means[7:9])
-           #univariate plots
-result <- mvn(data = ttbpn, mvnTest = "royston", univariatePlot = "histogram")
-
-# test w/ normalized data 
-#calculate z scores
-z.ttbpn <-scale(ttbpn)
-library(MVN)
-mvn(ttbpn)
-#calculate z score for count
-#z.data.p <- scale (X.p)
-#one-sample z.test to see if mean is diff than specified value of pop variability
-
-z.test(na.omit(data$col), mu = 0.5, stdev = squrt(0.08))
-
-#one-sample t-test to estimate population variance
-t.test(data$col, mu = 0.5, alternative = "two.sided", conf.level = 0.95)
-
-# cutoffs for skewness and kurtosis
-maha1.ttbpn <- sqrt(mahalanobis(ttbpn, colMeans(ttbpn), cov(ttbpn)))
-set.seed(1)
-covmve.ttbpn <- cov.rob(ttbpn)
-maha2.ttbpn <- sqrt(mahalanobis(ttbpn, covmve.ttbpn$center, covmve.ttbpn$cov))
-max.maha.ttbpn <- max(c(maha1.ttbpn, maha2.ttbpn))
-out.id <- ifelse(maha2.ttbpn <= sqrt(qchisq(0.975, 6)), 0, 1)
-par(mfrow = c(1, 2), las = 1)
-plot(maha1.ttbpn, xlab = "index" ,ylab = "Mahalanobis distance", ylim = c(0, max.maha.ttbpn), col = out.id + 1, pch = 15 * out.id + 1)
-abline(h = sqrt(qchisq(0.975, 6)))
-plot(maha2.ttbpn, xlab = "index", ylab = "robust Mahalanobis distance",
-     ylim = c(0, max.maha.ttbpn), col = out.id + 1, pch = 15 * out.id + 1)
-abline(h = sqrt(qchisq(0.975, 6)))
-par(mfrow = c(1, 1))
-
+psych::alpha(aut, use="pairwise.complete.obs")
+psych::alpha(rel, use="pairwise.complete.obs")
+psych::alpha(com, use="pairwise.complete.obs")
+psych::alpha(bpn_f, use="pairwise.complete.obs")
+psych::alpha(pac, use="pairwise.complete.obs")
+psych::alpha(gse, use = "pairwise.complete.obs")
+psych::alpha(disid, use = "pairwise.complete.obs")
+psych::alpha(flour, use = "pairwise.complete.obs")
 
 # 1-factor standardized model w/ MLR ####
 onefactor.cfa <- '
@@ -322,7 +278,7 @@ rel~~com
 '
 # Fit the model
 ttbpnmod.fit <- cfa(ttbpnmod.mod, data = ttbpnmod)
-sl <- standardizedSolution(fit)
+sl <- standardizedSolution(ttbpnmod.fit)
 sl <- sl$est.std[sl$op == "=~"]
 names(sl) <- names(ttbpnmod)
 sl
@@ -331,7 +287,7 @@ re <- 1 - sl^2
 # Compute composite reliability
 sum(sl)^2 / (sum(sl)^2 + sum(re))
 # Extract the standardized loading matrix
-loadMatrix <- inspect(fit, "std")$lambda
+loadMatrix <- inspect(ttbpnmod.fit, "std")$lambda
 # Clear the zero loadings
 loadMatrix[loadMatrix==0] <- NA
 # Calculate mean squared loadings (i.e. AVEs)
@@ -392,7 +348,7 @@ re <- 1 - sl^2
 # calculate AVE for com
 ave.com <- (sum(sl^2))/6
 ave.com
-# Compute composite comiability
+# Compute composite reliability
 sum(sl)^2 / (sum(sl)^2 + sum(re))
 # Extract the standardized loading matrix
 loadMatrix <- inspect(com.fit, "std")$lambda
