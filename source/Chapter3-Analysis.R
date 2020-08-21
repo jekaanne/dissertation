@@ -132,7 +132,7 @@ modelvars.c$ttbpnmean.c <- c(scale(modelvars.c$ttbpnmean, center=TRUE, scale=FAL
 modelvars.c$altbpnfmean.c <- c(scale(modelvars.c$altbpnfmean, center=TRUE, scale=FALSE))
 
 # mediator model
-summary(model.m <- predict.lm(altbpnfmean.c ~ ttbpnmean.c + loghhincome, data = modelvars.c, subset = -c(38, 153)))
+summary(model.m <- lm(altbpnfmean.c ~ ttbpnmean.c + loghhincome, data = modelvars.c, subset = -c(38, 153)))
 apa.reg.table(model.m, filename="output/Ch3-H1b.1.doc")
 
 # outcome model
@@ -174,19 +174,19 @@ apa.reg.table(model.y.dis, filename="output/Ch3-H1c.2.doc")
 summary(out.model.2 <- mediate(model.m.dis, model.y.dis, treat="ttbpnmean.c", mediator="altbpnfmean.c",sims = 1000, boot = TRUE, boot.ci.type = "bca"))
 plot(out.model.2)
 
-plot(out.model.dis)
+plot(out.model.2)
 # for disabled participants
 summary(out.model.dis <- mediate(model.m.dis, model.y.dis, treat="ttbpnmean.c", mediator="altbpnfmean.c", covariates = list("disability_status" = 1), conf.level = .984, sims = 1000, boot = TRUE, boot.ci.type = "bca"))
 plot(out.model.dis)
 
 # for nondisabled participants
-summary(out.model.nondis <- mediate(model.m.dis, model.y.dis, treat="ttbpnmean.c", mediator="altbpnfmean.c", covariates = list(disability_status= 0),sims = 1000, boot = TRUE, boot.ci.type = "perc"))
+summary(out.model.nondis <- mediate(model.m.dis, model.y.dis, treat="ttbpnmean.c", mediator="altbpnfmean.c", covariates = list("disability_status"= 0),sims = 1000, boot = TRUE, boot.ci.type = "perc"))
 plot(out.model.nondis)
 
 #sensitivity analysis
-summary(sens.cont.dis <- medsens(out.model.dis, rho.by = 0.05))
-plot(sens.cont.dis, sens.par = "rho")
-plot(sens.cont.dis, sens.par = "R2", r.type = "total", sign.prod = "negative")
+summary(sens.cont <- medsens(out.model.nondis, rho.by = 0.05))
+plot(sens.cont, sens.par = "rho")
+plot(sens.cont, sens.par = "R2", r.type = "total", sign.prod = "negative")
 
 
 

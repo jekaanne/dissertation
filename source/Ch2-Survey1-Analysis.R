@@ -10,14 +10,16 @@ library(lavaan)
 library(pander)
 library(psych)
 library(semPlot)
+library(semTools)
 library(coefficientalpha)
 library(TeachingDemos)
 library(MASS)
 library(ICS)
 library(MVN)
 library(car)
-library(BaylorEdPsych)
-library (mvnmle)
+library(kableExtra)
+
+
 
 # Demographic Data Tables ####
 #create contingency tables for each variable and combine 
@@ -153,6 +155,10 @@ onefactor.residuals <- resid(onefactor.fit, type = "standardized")
 # covariance of residuals
 vcov(onefactor.fit)
 
+lavaanPlot(model = onefactor.fit, node_options = list(shape = "box", fontname = "Helvetica"), edge_options = list(color = "grey"), coefs = TRUE, covs = TRUE, stars = TRUE)
+
+
+
 # 3-factor TTBPN model baseline with MLR ####
 threefactor.cfa <- '
 aut=~aut1 + aut2+ aut3+ aut4+ aut5+ aut6
@@ -178,7 +184,7 @@ vcov(threefactor.fit)
 
 
 # chisq test of models 
-anova(onefactor.fit, threefactormod.fit )
+anova(onefactor.fit, threefactor.fit )
 
 # 3- factor modified TTBPN model ####
 threefactormod.cfa <- '
@@ -191,6 +197,10 @@ com~~com
 aut~~rel
 aut~~com
 rel~~com
+rel1 ~~ rel2
+rel2 ~~ rel4
+aut3 ~~ aut5
+com3 ~~ com6
 '
 threefactormod.fit <- cfa(threefactormod.cfa, data = ardraw, sample.nobs = 286, meanstructure = TRUE, estimator = "MLR", std.lv=TRUE)
 # print summary w/ fit statistics
@@ -204,21 +214,17 @@ threefactormod.residuals <- resid(threefactormod.fit, type = "standardized")
 # covariance of residuals
 vcov(threefactormod.fit)
 # print Table of Factor loadings
-library(kableExtra)
-parameterEstimates(threefactormod.fit, ci = TRUE, remove.nonfree = TRUE,  standardized=TRUE) %>% 
-  filter(op == "=~") %>% 
-  select('Indicator'=rhs, 
-         'Beta'=std.all,
-         'SE'=se, 'Z'=z, 
-         'CI.Lower'=ci.lower,
-         'CI.Upper'=ci.upper) %>% 
-  kable(digits = 3, format="pandoc", caption="Table X: Factor Loadings")
+parameterEstimates(threefactormod.fit, ci = TRUE, remove.nonfree = TRUE,  standardized=TRUE) %>% filter(op == "=~") %>% dplyr::select("Indicator"=rhs, "Beta"=std.all,"SE"=se, "Z"=z,  "CI.Lower"=ci.lower, "CI.Upper"=ci.upper) %>% kable(digits = 3, format="pandoc", caption="Table X: Factor Loadings")
 #print diagram
-semPaths(threefactormod.fit, what="paths", whatLabels="par", rotation = 2, label.prop=0.9, edge.label.color = "black", edge.width = 0.5, shapeMan = "rectangle", shapeLat = "ellipse", sizeMan = 3, sizeLat = 3,  curve=2)
-
-library(lavaanPlot)
-lavaanPlot(model = , labels = labels, coefs = TRUE, covs = TRUE, stars = TRUE)
+semPaths(threefactormod.fit, what="paths", whatLabels="par", rotation = 1, label.prop=1, edge.label.color = "black", edge.width = 0.25, shapeMan = "rectangle", shapeLat = "ellipse", sizeMan = 5, sizeLat = 5,  curve=2)
 lavaanPlot(model = threefactormod.fit, node_options = list(shape = "box", fontname = "Helvetica"), edge_options = list(color = "grey"), coefs = TRUE, covs = TRUE, stars = TRUE)
+
+
+#chisq test of 1-factor model vs 3-factor model difference
+anova(onefactor.fit, threefactormod.fit)
+
+#chisq test of nested model difference
+anova(threefactormod.fit, threefactor.fit)
 
 
 # 1-factor BPNF model ####
@@ -242,15 +248,16 @@ bpnf.threefactor.cfa <- '
 autf=~ a*aut_f1 + b*aut_f2 + c*aut_f3 + d*aut_f4
 relf=~ e*rel_f1 + f*rel_f2 + g*rel_f3 + h*rel_f4
 comf=~ i*com_f1 + j*com_f2 + k*com_f3 + l*com_f4
-autf~~m*autf
-relf~~n*relf
-comf~~o*comf
+autf~~n*relf
+autf~~o*comf
 comf~~p*relf
-autf~~q*relf
-autf~~r*comf
 '
-bpnf.threefactor.fit <- cfa(bpnf.threefactor.cfa, data = ardraw, sample.nobs = 286, meanstructure = TRUE, estimator = "MLR")
+bpnf.threefactor.fit <- cfa(bpnf.threefactor.cfa, data = ardraw, sample.nobs = 286, meanstructure = TRUE, estimator = "MLR", std.lv=TRUE)
 summary(bpnf.threefactor.fit, fit.measures=TRUE, rsquare=TRUE, standardized=TRUE, ci=TRUE)
+
+# CR and AVE 
+reliability(bpnf.threefactor.fit)
+
 # check mindices for highly correlated items
 modificationindices(bpnf.threefactor.fit, sort=TRUE, minimum.value=3)
 # check loading factors on their own
@@ -259,9 +266,11 @@ inspect(bpnf.threefactor.fit, what = "std")$lambda
 bpnf.threefactor.residuals <- resid(bpn.threefactor.fit, type = "standardized")
 # covariance of residuals
 vcov(bpnf.threefactor.fit)
+lavaanPlot(model = bpnf.threefactor.fit, node_options = list(shape = "box", fontname = "Helvetica"), edge_options = list(color = "grey"), coefs = TRUE, covs = TRUE, stars = TRUE)
 
-#chisq test of model difference
-anova(bpn.onefactor.fit , bpnf.threefactor.fit)
+
+
+
 
 # TTBPN scale validity measures####
 # TTBPN indicator and composite reliability #
