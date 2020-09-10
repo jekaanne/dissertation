@@ -1,45 +1,44 @@
-library(here)
-library(data.table)
-library(tidyverse)
-library(xtable)
-library(pander)
-library(rmarkdown)
-library(kableExtra)
-library(Matrix)
-library(lavaan)
-library(pander)
-library(psych)
-library(semPlot)
-library(semTools)
-library(coefficientalpha)
-library(TeachingDemos)
-library(MASS)
-library(ICS)
-library(MVN)
-library(car)
-library(kableExtra)
+library(here) #Sets working directory
+library(renv) #Package management by RStudio
+library(data.table) #Smart data frames
+library(tidyverse) #Packages for tidy data
+library(Gmisc) #Descriptive statistics tables
+library(sjPlot) #Spearman correlation matrix function 
+library(rmarkdown) #Dynamic document creator
+library(pander) #Pandoc writer
+library(broom) #Tidy up statistical objects
+library(kableExtra) #For complex tables
+library(Matrix) #Various matrix options
+library(ICS) 
+library(car) #Companion to Applied Regression book (ncvTest)
+library(psych) #Basic data functions
+library(MVN) #Test for multivariate normality
+library(lavaan) #LAtent VAriable ANalysis
+library(semTools) #Tools for SEM
+#library(semPlot) #Plot SEM models
+library(MASS) #Support functions for lme and mediation packages
+library(Hmisc) #Functions for data analysis, graphics, utility operations, functions for computing sample size and power
+
 
 
 
 # Demographic Data Tables ####
-#create contingency tables for each variable and combine 
-colstable <- data.table(variables = c("Female", "Male", "Not specified", "Non-white", "White", "Advanced degree","College", "High school or less", "<5,000", "5,000 - 12,000", "12,000 - 25,000", "25,000 - 50,000", "50,000-100,000", "100,000+", "Full Time", "Part time", "Unemployed", "Missing"))
-demotable1<-table(ardraw$gender, ardraw$disability_status)
-demotable2<-table(ardraw$white, ardraw$disability_status)
-demotable3<-table(ardraw$education, ardraw$disability_status)
-demotable4<-table(ardraw$emp_status, ardraw$disability_status)
-demotable5<-table(ardraw$income_range, ardraw$disability_status)
-demotable<- data.table(rbind(demotable1, demotable2, demotable3, demotable4, demotable5))
-#create proportions of rows - change margins = 2 if column proportions are preferred
-demo_proportions <- prop.table(as.matrix(demotable), margin=1)*100
-#combine variables with individual contingency tables
-democomplete <- cbind(colstable, demotable, round(demo_proportions, 2))
-#print(xtable(democomplete), type="latex", comment=FALSE)
-print(democomplete) %>% 
-  kable(digits = 3, format="pandoc", caption="demographics 1")
-
-
-
+htmlTable::setHtmlTableTheme(css.rgroup = "")
+label(ardraw$gender) <- "Gender"
+label(ardraw$white) <- "Race/Ethnicity"
+label(ardraw$education) <- "Education"
+label(ardraw$income_range) <- "Income Range"
+label(ardraw$emp_status) <- "Employment Status"
+getTable1Stats <- function(x, digits = 0, ...){
+  getDescriptionStatsBy(x = x, by = ardraw$disability_status)
+}
+t1 <- list()
+t1[["Gender"]] <- getTable1Stats(ardraw$gender)
+t1[["Race/Ethnicity"]] <- getTable1Stats(ardraw$white)
+t1[["Education"]] <- getTable1Stats(ardraw$education)
+t1[["Income Range"]] <- getTable1Stats(ardraw$income_range)
+t1[["Employment Status"]] <- getTable1Stats(ardraw$emp_status)
+mergeDesc(t1, htmlTable_args = list(caption  = "Participant demographic profiles"))
 
 
 # create scale tables and calculate means ####
@@ -67,8 +66,7 @@ relf <- dplyr::select(ardrawfactors, rel_f1, rel_f2, rel_f3, rel_f4)
 comf <- dplyr::select(ardrawfactors, com_f1, com_f2, com_f3, com_f4)
 
 #altbpn measures
-altbpnfactors <- dplyr::select(ardraw, aut1, aut2, aut3, aut4, aut5, aut6, 
-                        rel1, rel2, rel3, rel4, rel5, rel6,
+altbpnfactors <- dplyr::select(ardraw, aut1, aut2, aut3, aut4, aut5, aut6, rel1, rel2, rel3, rel4, rel5, rel6,
                         com1, com2, com3, com4, com5, com6,
                         aut_f1, aut_f2, aut_f3, aut_f4, 
                         rel_f1, rel_f2, rel_f3, rel_f4, 
@@ -76,18 +74,7 @@ altbpnfactors <- dplyr::select(ardraw, aut1, aut2, aut3, aut4, aut5, aut6,
 # complete cases only
 altbpnfactors <- altbpnfactors[complete.cases(altbpnfactors),]
 
-#alt scale w/ final items and complete cases (n = 168)
-altaut <- dplyr::select(altbpnfactors, aut2, aut4, aut5, aut6)
-altrel <- dplyr::select(altbpnfactors, rel3, rel4, rel5, rel6)
-altcom <- dplyr::select(altbpnfactors, com1, com2, com3, com5)
-altautf <- dplyr::select(altbpnfactors, aut_f1, aut_f2, aut_f3, aut_f4)
-altrelf <- dplyr::select(altbpnfactors, rel_f1, rel_f2, rel_f3, rel_f4)
-altcomf <- dplyr::select(altbpnfactors, com_f1, com_f2, com_f3, com_f4)
-pac <- dplyr::select(altbpnfactors, trans_pac1, trans_pac2, trans_pac3, trans_pac4)
-gse <- dplyr::select(altbpnfactors, gse1, gse2, gse3, gse4)
-disid <- dplyr::select(altbpnfactors, dis_identity1, dis_identity2, dis_identity3, dis_identity4)
-altbpnf <-  dplyr::select(ardraw, trans_pac1, trans_pac2, trans_pac3, trans_pac4, gse1, gse2, gse3, gse4,  dis_identity1, dis_identity2, dis_identity3, dis_identity4)
-flour <- dplyr::select(ardraw, flour1, flour2, flour3, flour4, flour5, flour6, flour7, flour8)
+
 
 
 # mean-score-calculations removing missing values for TTBPN and BPNF
@@ -101,7 +88,6 @@ ardrawfactors$comfmean <- rowMeans(comf, na.rm = TRUE)
 ardrawfactors$bpnfmean <- rowMeans(bpnf, na.rm = TRUE)
 ardraw$flourmean <- rowMeans(flour, na.rm = TRUE)
 ardraw$ttbpnmean <- rowMeans(ttbpn, na.rm = TRUE)
-ardraw$altbpnfmean <- rowMeans(altbpnf, na.rm = TRUE)
 
 
 #alt-bpn complete cases only
@@ -113,7 +99,7 @@ altbpnfactors$commean <- rowMeans(altcom, na.rm = TRUE)
 altbpnfactors$autfmean <- rowMeans(altautf, na.rm = TRUE)
 altbpnfactors$relfmean <- rowMeans(altrelf, na.rm = TRUE)
 altbpnfactors$comfmean <- rowMeans(altcomf, na.rm = TRUE)
-altbpnfactors$bpnfmean <- rowMeans(altbpnf, na.rm = TRUE)
+altbpnfactors$bpnfmean <- rowMeans(bpnf, na.rm = TRUE)
 altbpnfactors$pacmean <- rowMeans(pac, na.rm = TRUE)
 altbpnfactors$gsemean <- rowMeans(gse, na.rm = TRUE)
 altbpnfactors$disidmean <- rowMeans(disid, na.rm = TRUE)
@@ -121,9 +107,8 @@ altbpnfactors$disidmean <- rowMeans(disid, na.rm = TRUE)
 # scale means for correlation table
 subscale_means <- altbpnfactors[, c("autmean", "relmean", "commean", "autfmean", "relfmean", "comfmean", "pacmean", "disidmean", "gsemean")]
 #overall score correlation matrix
-library(apaTables)
-subscales.cor <- apa.cor.table(subscale_means, filename = "subscale-correlations", table.number = 1, show.conf.interval = TRUE, landscape = FALSE)
-subscales.cor
+tab_corr(subscale_means, na.deletion = c("listwise"),
+         corr.method = c("spearman"),)
 # create descriptive table of items
 psych::describe(ttbpn)
 psych::describe(bpnf)
@@ -164,9 +149,6 @@ threefactor.cfa <- '
 aut=~aut1 + aut2+ aut3+ aut4+ aut5+ aut6
 rel=~rel1+  rel2+ rel3+ rel4+ rel5+ rel6 
 com=~com1+ com2+ com3+ com4 + com5 + com6
-aut~~aut
-rel~~rel
-com~~com
 aut~~rel
 aut~~com
 rel~~com
@@ -194,9 +176,6 @@ com=~i*com1 + j*com2+ k*com3+ l*com6
 aut~~aut
 rel~~rel
 com~~com
-aut~~rel
-aut~~com
-rel~~com
 rel1 ~~ rel2
 rel2 ~~ rel4
 aut3 ~~ aut5
@@ -216,7 +195,7 @@ vcov(threefactormod.fit)
 # print Table of Factor loadings
 parameterEstimates(threefactormod.fit, ci = TRUE, remove.nonfree = TRUE,  standardized=TRUE) %>% filter(op == "=~") %>% dplyr::select("Indicator"=rhs, "Beta"=std.all,"SE"=se, "Z"=z,  "CI.Lower"=ci.lower, "CI.Upper"=ci.upper) %>% kable(digits = 3, format="pandoc", caption="Table X: Factor Loadings")
 #print diagram
-semPaths(threefactormod.fit, what="paths", whatLabels="par", rotation = 1, label.prop=1, edge.label.color = "black", edge.width = 0.25, shapeMan = "rectangle", shapeLat = "ellipse", sizeMan = 5, sizeLat = 5,  curve=2)
+semPaths(threefactormod.fit, what="paths", whatLabels="par", rotation = 1, label.prop=1.5, edge.label.color = "black", edge.width = 0.5, shapeMan = "rectangle", shapeLat = "ellipse", sizeMan = 5, sizeLat = 5,  sizeLat2 = 5, sizeInt = 3, sizeInt2 = 3, curve=1, intercepts = TRUE, edge.label.cex = 1.1, cardinal = FALSE, style ="mx", residuals = TRUE)
 lavaanPlot(model = threefactormod.fit, node_options = list(shape = "box", fontname = "Helvetica"), edge_options = list(color = "grey"), coefs = TRUE, covs = TRUE, stars = TRUE)
 
 
@@ -273,6 +252,12 @@ lavaanPlot(model = bpnf.threefactor.fit, node_options = list(shape = "box", font
 
 
 # TTBPN scale validity measures####
+#alt scale w/ final items and complete cases (n = 168)
+altaut <- dplyr::select(altbpnfactors, aut2, aut4, aut5, aut6)
+altrel <- dplyr::select(altbpnfactors, rel3, rel4, rel5, rel6)
+altcom <- dplyr::select(altbpnfactors, com1, com2, com3, com5)
+bpnf <-  dplyr::select(ardrawfactors, aut_f1, aut_f2, aut_f3, aut_f4, rel_f1, rel_f2, rel_f3, rel_f4, com_f1, com_f2, com_f3, com_f4)
+
 # TTBPN indicator and composite reliability #
 #ttbpn scale with modified variables
 ttbpnmod <- dplyr::select(ardrawfactors, aut2 , aut4, aut5, aut6, rel3, rel4, rel5, rel6, com1 , com2, com3, com5)

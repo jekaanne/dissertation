@@ -1,35 +1,49 @@
-library(renv)
-library(here)
-library(data.table)
-library(tidyverse)
+library(here) #Sets working directory
+library(renv) #Package management by RStudio
+library(data.table) #Smart data frames
+library(tidyverse) #Packages for tidy data
+library(sjPlot) #Spearman correlation matrix function 
 library(xtable)
 library(pander)
 library(rmarkdown)
 library(kableExtra)
 library(Matrix)
-library(lavaan)
+library(lavaan) #LAtent VAriable ANalysis
 library(pander)
 library(psych)
 library(semPlot)
-library(apaTables)
+library(semTools)
 library(coefficientalpha)
 # Demographic Data Tables ####
 #create contingency tables for each variable and combine 
-colstable <- data.table(variables = c("Female", "Male", "Not specified", "Non-white", "White", "Advanced degree","College", "High school or less", "<5,000", "5,000 - 12,000", "12,000 - 25,000", "25,000 - 50,000", "50,000-100,000", "100,000+", "Full Time", "Part time", "Unemployed", "Missing"))
-demotable1<-table(ardraw2$gender, ardraw2$disability_status)
-demotable2<-table(ardraw2$white, ardraw2$disability_status)
-demotable3<-table(ardraw2$education, ardraw2$disability_status)
-demotable4<-table(ardraw2$employed, ardraw2$disability_status)
-demotable5<-table(ardraw2$income_range, ardraw2$disability_status)
-demotable<- data.table(rbind(demotable1, demotable2, demotable3, demotable4, demotable5))
-#create proportions of rows - change margins = 2 if column proportions are preferred
-demo_proportions <- prop.table(as.matrix(demotable), margin=1)*100
-#combine variables with individual contingency tables
-democomplete <- cbind(colstable, demotable, round(demo_proportions, 2))
-#print(xtable(democomplete), type="latex", comment=FALSE)
+htmlTable::setHtmlTableTheme(css.rgroup = "")
+label(ardraw2$gender) <- "Gender"
+label(ardraw2$white) <- "Race/Ethnicity"
+label(ardraw2$education) <- "Education"
+label(ardraw2$income_range) <- "Income Range"
+label(ardraw2$emp_ft) <- "Full-time"
+label(ardraw2$emp_pt) <- "Part-time"
+label(ardraw2$emp_self) <- "Self-Employed"
+label(ardraw2$emp_student) <- "Student"
+label(ardraw2$emp_unemp) <- "Unemployed"
+label(ardraw2$emp_retired) <- "Retired"
 
-print(democomplete) %>% 
-  kable(digits = 3, format="pandoc", caption="demographics 1")
+getTable1Stats <- function(x, digits = 0, prop_fn = describeProp, total_col_show_perc = TRUE){
+  getDescriptionStatsBy(x = x, by = ardraw2$disability_status)
+}
+
+t1 <- list()
+t1[["Gender"]] <- getTable1Stats(ardraw2$gender)
+t1[["Race/Ethnicity"]] <- getTable1Stats(ardraw2$white)
+t1[["Education"]] <- getTable1Stats(ardraw2$education)
+t1[["Income Range"]] <- getTable1Stats(ardraw2$income_range)
+t1[["Full Time"]] <- table(ardraw2$emp_ft, ardraw2$disability_status)
+t1[["Part Time"]] <- table(ardraw2$emp_pt, ardraw2$disability_status)
+t1[["Self-Employed"]] <- table(ardraw2$emp_self, ardraw2$disability_status)
+t1[["Student"]] <- table(ardraw2$emp_student, ardraw2$disability_status)
+t1[["Unemployed"]] <- table(ardraw2$emp_unemp, ardraw2$disability_status)
+t1[["Retired"]] <- table(ardraw2$emp_retired, ardraw2$disability_status)
+mergeDesc(t1, htmlTable_args = list(caption  = "Participant demographic profiles"))
 
 # create scale tables and calculate means ####
 # complete subscales survey 1
@@ -43,7 +57,7 @@ ardraw2factors <- dplyr::select(ardraw2, aut1, aut2, aut3, aut4, aut5, aut6,
 ttbpn2 <- dplyr::select(ardraw2, aut1, aut2, aut3, aut4, aut5, aut6, 
                  rel1, rel2, rel3, rel4, rel5, rel6,
                  com1, com2, com3, com4)
-#discriminant validity for correlations
+#construct validity for correlations
 apa.cor.table(ttbpn2, filename = "discard", table.number = 1, show.conf.interval = TRUE, landscape = FALSE)
 
 aut2 <- dplyr::select(ardraw2factors, aut1, aut2, aut3, aut4, aut5, aut6)
@@ -54,8 +68,7 @@ gse2 <- dplyr::select(ardraw2factors, gse1, gse2, gse3, gse4)
 discr <- dplyr::select(ardraw2factors, discr1, discr2, discr3, discr4)
 altbpnf2 <-  dplyr::select(ardraw2factors, trans_pac1, trans_pac2, trans_pac3, trans_pac4, gse1, gse2, gse3, gse4,  discr1, discr2, discr3, discr4)
 
-# mean-score-calculations removing missing values for TTBPN and BPNF
-ardraw2factors$ttbpnmean <- rowMeans(ttbpn2, na.rm = TRUE)
+# mean-score-calculations removing missing values for TTBPN and BPNF subscales
 ardraw2factors$autmean <- rowMeans(aut2, na.rm = TRUE)
 ardraw2factors$relmean <- rowMeans(rel2, na.rm = TRUE)
 ardraw2factors$commean <- rowMeans(com2, na.rm = TRUE)
@@ -66,10 +79,13 @@ ardraw2factors$discrmean <- rowMeans(discr2, na.rm = TRUE)
 # scale means for correlation table
 subscale_means2 <- select(ardraw2factors, autmean, relmean, commean, pacmean, discrmean, gsemean)
 #overall score correlation matrix
-subscales2.cor <- apa.cor.table(subscale_means2, filename = "subscale-correlations", table.number = 1, show.conf.interval = TRUE, landscape = FALSE)
-subscales2.cor
+matrix.subscales <- as.matrix(subscale_means)
+rcorr(matrix.subscales)
+
+
 # create descriptive table of items
 psych::describe(ttbpn2)
+psych::describe(altbpnf2)
 psych::describe(pac2)
 psych::describe(gse2)
 psych::describe(discr2)
@@ -77,8 +93,6 @@ psych::describe(discr2)
 psych::alpha(aut2, use = "pairwise.complete.obs")
 psych::alpha(rel2, use = "pairwise.complete.obs")
 psych::alpha(com2, use = "pairwise.complete.obs")
-
-
 psych::alpha(pac2, use = "pairwise.complete.obs")
 psych::alpha(gse2, use = "pairwise.complete.obs")
 psych::alpha(discr2, use = "pairwise.complete.obs")
@@ -89,10 +103,12 @@ psych::alpha(discr2, use = "pairwise.complete.obs")
 #boxplot(ardraw2factors$ttbpnmean ~ ardraw2$disability_status, ylab#="Score", col=c("red", "blue"), main="Boxplot of scores in 3 groups")
 
 # checking for multivariate normal #
-mvn(ttbpn2, mvnTest = c("mardia", "hz", "royston", "dh", "energy"), covariance = TRUE, tol = 1e-25, alpha = 0.5, scale = FALSE, desc = TRUE, transform = "none", univariateTest = c("SW", "CVM", "Lillie", "SF", "AD"), univariatePlot = "none", multivariatePlot = "none",  multivariateOutlierMethod = "none", bc = FALSE, bcType = "rounded", showOutliers = TRUE, showNewData = TRUE)
+mvn(ttbpn2, mvnTest = c("mardia"), covariance = TRUE, tol = 1e-25, alpha = 0.5, scale = FALSE, desc = TRUE, transform = "none", univariateTest = c("SW", "CVM", "Lillie", "SF", "AD"), univariatePlot = "none", multivariatePlot = "none",  multivariateOutlierMethod = "none", bc = FALSE, bcType = "rounded", showOutliers = TRUE, showNewData = TRUE)
 scatterplotMatrix(subscale_means[7:9])
            #univariate plots
 result <- mvn(data = ttbpn, mvnTest = "royston", univariatePlot = "histogram")
+
+mvn(altbpnf2, mvnTest = c("mardia", "hz", "royston", "dh", "energy"), covariance = TRUE, tol = 1e-25, alpha = 0.5, scale = FALSE, desc = TRUE, transform = "none", univariateTest = c("SW", "CVM", "Lillie", "SF", "AD"), univariatePlot = "none", multivariatePlot = "none",  multivariateOutlierMethod = "none", bc = FALSE, bcType = "rounded", showOutliers = TRUE, showNewData = TRUE)
 
 # 3-factor TTBPN model baseline with Pairwise corrs ####
 cov.ttbpn2 <- cov(ttbpn2, use = "pairwise.complete.obs")
@@ -107,7 +123,7 @@ aut~~rel
 aut~~com
 rel~~com
 '
-threefactor2.fit <- cfa(threefactor2.cfa, sample.cov = cov.ttbpn2, sample.nobs = 211, meanstructure = TRUE, std.lv=FALSE)
+threefactor2.fit <- cfa(threefactor2.cfa, sample.cov = cov.ttbpn2, sample.nobs = 211, std.lv=FALSE)
 summary(threefactor2.fit, fit.measures=TRUE, rsquare=TRUE, standardized=TRUE, ci=TRUE)
 # check mindices for highly correlated items
 modificationindices(threefactor2.fit, sort=TRUE, minimum.value=3)
@@ -137,7 +153,7 @@ aut~~rel
 aut~~com
 rel~~com
 '
-threefactor2.fit <- cfa(threefactor2.cfa, data = ttbpn2, sample.nobs = 211, meanstructure = TRUE, estimator = "MLR", std.lv=TRUE)
+threefactor2.fit <- cfa(threefactor2.cfa, data = ardraw2)
 # print summary w/ fit statistics
 summary(threefactor2.fit, fit.measures=TRUE, rsquare=TRUE, standardized=TRUE, ci=TRUE)
 # check mindices for highly correlated items
@@ -172,7 +188,7 @@ rel~~com
 rel2~~rel3
 com3~~com4
 '
-threefactor2mod.fit <- cfa(threefactor2mod.cfa, data = ardraw2, sample.nobs = 211, meanstructure = TRUE, estimator = "MLR", std.lv=TRUE)
+threefactor2mod.fit <- cfa(threefactor2mod.cfa, data = ardraw2, sample.nobs = 211, estimator = "MLR", std.lv=TRUE)
 # print summary w/ fit statistics
 summary(threefactor2mod.fit, fit.measures=TRUE, rsquare=TRUE, standardized=TRUE, ci=TRUE)
 # check mindices for highly correlated items
@@ -209,7 +225,7 @@ pac~~gse
 pac~~discr
 gse~~discr
 '
-alt.bpnf.threefactor2.fit <- cfa(alt.bpnf.threefactor2.cfa, data = ardraw2, sample.nobs = 286, meanstructure = TRUE, estimator = "MLR", std.lv=TRUE)
+alt.bpnf.threefactor2.fit <- cfa(alt.bpnf.threefactor2.cfa, data = ardraw2, sample.nobs = 286, estimator = "MLR", std.lv=TRUE)
 # print summary w/ fit statistics
 summary(alt.bpnf.threefactor2.fit, fit.measures=TRUE, rsquare=TRUE, standardized=TRUE, ci=TRUE)
 # check mindices for highly correlated items
@@ -236,15 +252,17 @@ lavaanPlot(model = alt.bpnf.threefactor2.fit, node_options = list(shape = "box",
 
 # TTBPN scale validity measures####
 # TTBPN indicator and composite reliability #
+#select indicators for modified model 
+ttbpnmod2 <- dplyr::select(ardraw2, aut2, aut3, aut5, aut6, rel2, rel3, rel4, rel6, com1, com2, com3, com4)
+
 # Define the model
-library(lavaan)
 ttbpnmod2.mod <- '
 aut=~a*aut2 + b*aut3+ c*aut5+ d*aut6
 rel=~e*rel2 + f*rel3 + g*rel4+ h*rel6 
 com=~i*com1 + j*com2+ k*com3+ l*com4
 '
 # Fit the model
-ttbpnmod2.fit <- cfa(ttbpnmod2.mod, data = ttbpnmod2, estimator = "MLR", WLS.V = TRUE, std.lv=TRUE)
+ttbpnmod2.fit <- cfa(ttbpnmod2.mod, data = ardraw2, estimator = "MLR", WLS.V = TRUE, std.lv=TRUE)
 sl <- standardizedSolution(ttbpnmod2.fit)
 sl <- sl$est.std[sl$op == "=~"]
 names(sl) <- names(ttbpnmod2)
@@ -262,14 +280,13 @@ apply(loadMatrix^2,2,mean, na.rm = TRUE)
 library(semTools)
 reliability(ttbpnmod2.fit)
 discriminantValidity(ttbpnmod2.fit, cutoff = 0.9, merge = FALSE, level = 0.95)
-htmt(ttbpnmod2.mod, data = ttbpnmod2, sample.cov = NULL, missing = "listwise",
-     ordered = NULL, absolute = TRUE)
+htmt(ttbpnmod2.mod, data = ttbpnmod2, sample.cov = NULL, missing = "listwise", ordered = NULL, absolute = TRUE)
 
-#aut CR calculation
+#subscale aut CR calculation
 #select final aut vars 
-altaut2 <- select(aut2, aut2, aut3, aut5, aut6 )
+altaut2 <- dplyr::select(aut2, aut2, aut3, aut5, aut6 )
 aut2.model <- ' aut  =~ aut2 + aut3+ aut5+ aut6'
-aut2.fit <- cfa(aut2.model, data = ttbpnmod2, meanstructure = TRUE)
+aut2.fit <- cfa(aut2.model, data = ttbpnmod2)
 sl <- standardizedSolution(aut2.fit)
 sl <- sl$est.std[sl$op == "=~"]
 names(sl) <- names(altaut2)
@@ -291,7 +308,7 @@ apply(loadMatrix^2,2,mean, na.rm = TRUE)
 
 #rel CR calculation 
 #select final rel vars 
-altrel2 <- select(rel2, rel2, rel3, rel4, rel6)
+altrel2 <- dplyr::select(rel2, rel2, rel3, rel4, rel6)
 rel2.model <- ' rel  =~ rel2 + rel3 + rel4+ rel6'
 rel2.fit <- cfa(rel2.model, data = ttbpnmod2)
 sl <- standardizedSolution(rel2.fit)
@@ -313,6 +330,7 @@ loadMatrix[loadMatrix==0] <- NA
 apply(loadMatrix^2,2,mean, na.rm = TRUE)
 
 #com CR calculation 
+com2 <- dplyr::select(rel2, rel2, rel3, rel4, rel6)
 com2.model <- ' com  =~ com1 + com2 + com3 + com4'
 com2.fit <- cfa(com2.model, data = ttbpnmod2)
 sl <- standardizedSolution(com2.fit)
@@ -334,7 +352,7 @@ loadMatrix[loadMatrix==0] <- NA
 apply(loadMatrix^2,2,mean, na.rm = TRUE)
 
 # compute final 3-factor model validity
-cr2.threef.fit <- cfa(ttbpnmod2.mod, data = ttbpnmod2, meanstructure = TRUE)
+cr2.threef.fit <- cfa(ttbpnmod2.mod, data = ttbpnmod2)
 sl <- standardizedSolution(cr2.threef.fit)
 sl <- sl$est.std[sl$op == "=~"]
 names(sl) <- names(ttbpnmod2)
@@ -363,7 +381,7 @@ sq.corr.ttbpn2
 alt.bpnf2.model <- '
 pac=~trans_pac1 + trans_pac2 + trans_pac3 + trans_pac4
 gse=~gse1 +gse2 + gse3 +  gse4
-discr=~discr1 + discr2+ discr3 + discr4
+discr=~disc1 + disc2+ disc3 + disc4
 pac~~gse
 pac~~discr
 gse~~discr
@@ -387,7 +405,7 @@ apply(loadMatrix^2,2,mean, na.rm = TRUE)
 
 #pac CR calculation
 pac.model <- 'pac=~trans_pac1 + trans_pac2 + trans_pac3 + trans_pac4'
-pac.fit <- cfa(pac.model, data = altbpnf2, meanstructure = TRUE)
+pac.fit <- cfa(pac.model, data = altbpnf2)
 sl <- standardizedSolution(pac.fit)
 sl <- sl$est.std[sl$op == "=~"]
 names(sl) <- names(pac)
@@ -450,10 +468,172 @@ loadMatrix[loadMatrix==0] <- NA
 # Calculate mean squared loadings (i.e. AVEs)
 apply(loadMatrix^2,2,mean, na.rm = TRUE)
 
-# create mean correlation table and test for discriminant validity by squaring correlation
-altbpn2.factors<- ardraw2factors[, c("pacmean", "gsemean", "discrmean")]
-corr.altbpn2 <- cor(altbpn2.factors)
-sq.corr.altbpn2 <- corr.altbpn2^2
-sq.corr.altbpn2
+#htmt for discriminant validity
+htmt(alt.bpnf2.model, data = ardraw2, sample.cov = NULL, missing = "listwise", ordered = NULL, absolute = TRUE)
+
+
+
+
+
+# Measurement Invariance for TTBPN final model ####
+
+
+
+# see https://rstudio-pubs-static.s3.amazonaws.com/194879_192b64ad567743d392b559d650b95a3b.html for instructions 
+fit.indices <- c("chisq", "df", "rmsea", "tli", "cfi", "aic")
+
+groups.model <- '
+aut=~a*aut2 + b*aut3+ c*aut5+ d*aut6
+rel=~e*rel2 + f*rel3 + g*rel4+ h*rel6 
+com=~i*com1 + j*com2+ k*com3+ l*com4
+aut~~rel
+aut~~com
+com~~rel
+rel2~~rel3
+com3~~com4
+aut2~~aut6
+aut3~~aut6
+'
+
+groups.baseline<-lavaan::cfa(groups.model, data=ardraw2, sample.nobs = 211, estimator = "MLR", std.lv=TRUE)
+
+fitMeasures(groups.baseline, fit.indices)
+modindices(groups.baseline, sort. = TRUE)
+
+configural <- cfa(groups.model, data=ardraw2, group = "disability_status", sample.nobs = 211, estimator = "MLR", std.lv=TRUE)
+fitMeasures(configural, fit.indices, )
+weak.invariance <- cfa(groups.model, data=ardraw2, group = "disability_status", group.equal = "loadings", sample.nobs = 211, estimator = "MLR", std.lv=TRUE)
+fitMeasures(weak.invariance,  fit.indices)
+
+anova(weak.invariance, configural)
+fit.stats <- rbind(fitmeasures(configural, fit.measures = c("chisq", "df", "rmsea", "tli", "cfi", "aic")), fitmeasures(weak.invariance, fit.measures = c("chisq", "df", "rmsea", "tli", "cfi", "aic")))
+rownames(fit.stats) <- c("configural", "weak invariance")
+fit.stats
+strong.invariance <- cfa(groups.model, data=ardraw2, group = "disability_status", group.equal = c( "loadings", "intercepts"), sample.nobs = 211,  estimator = "MLR", std.lv=TRUE)
+summary(strong.invariance, fit.measures=TRUE, rsquare=TRUE, standardized=TRUE, ci=TRUE)
+
+anova(strong.invariance, weak.invariance)
+
+#partial invariance test
+#lavTestScore(strong.invariance)
+#partable.ttbpn <- parTable(strong.invariance)
+#strong.invariance2 <- cfa(groups.model, data=ardraw2, group = "disability_status", group.equal = c( "loadings", "intercepts"), group.partial=c("rel4~1"), sample.nobs = 211,  estimator = "MLR", std.lv=TRUE)
+#anova(strong.invariance2, weak.invariance)
+#summary(strong.invariance2, fit.measures = TRUE)
+
+#strict.invariance <- cfa(groups.model, data=ardraw2, group = "disability_status", group.equal = c( "loadings", "intercepts", "residuals"), group.partial=c("rel4~1"), sample.nobs = 211,  estimator = "MLR", std.lv=TRUE)
+#anova(strong.invariance2, strict.invariance)
+
+fit.stats <- rbind(fit.stats, fitmeasures(strong.invariance, fit.measures = c("chisq", "df", "rmsea", "tli", "cfi", "aic")))
+rownames(fit.stats)[3:3] <- c("strong")
+round(fit.stats, 3)
+
+
+# alt-bpn measurement invariance
+altgroups.model <- '
+pac=~a*trans_pac1 + b*trans_pac2 + c*trans_pac3 + d*trans_pac4
+gse=~e*gse1 +f*gse2 + f*gse3 +  h*gse4
+discr=~i*disc1 + j*disc2+ k*disc3 + l*disc4
+pac~~gse
+pac~~discr
+gse~~discr
+'
+
+altgroups.baseline<-lavaan::cfa(altgroups.model, data=ardraw2, sample.nobs = 211, estimator = "MLR")
+fitMeasures(altgroups.baseline, fit.indices)
+modindices(altgroups.baseline, sort. = TRUE)
+
+
+configural <- cfa(altgroups.model, data=ardraw2, group = "disability_status", sample.nobs = 211,  estimator = "MLR", std.lv=TRUE)
+fitMeasures(configural, fit.indices)
+weak.invariance <- cfa(altgroups.model, data=ardraw2, group = "disability_status", group.equal = "loadings", sample.nobs = 211,  estimator = "MLR", std.lv=TRUE)
+fitMeasures(weak.invariance,  fit.indices)
+anova(weak.invariance, configural)
+fit.stats <- rbind(fitmeasures(configural, fit.measures = c("chisq", "df", "rmsea", "tli", "cfi", "aic")), fitmeasures(weak.invariance, fit.measures = c("chisq", "df", "rmsea", "tli", "cfi", "aic")))
+rownames(fit.stats) <- c("configural", "weak invariance")
+fit.stats
+strong.invariance <- cfa(altgroups.model, data=ardraw2, group = "disability_status", group.equal = c( "loadings", "intercepts"), sample.nobs = 211,  estimator = "MLR", std.lv=TRUE)
+summary(strong.invariance, fit.measures = TRUE)
+
+anova(strong.invariance, weak.invariance)
+
+#partial invariance test
+lavTestScore(strong.invariance)
+partable.alt <- parTable(strong.invariance)
+strong.invariance2 <- cfa(altgroups.model, data=ardraw2, group = "disability_status", group.equal = c( "loadings", "intercepts"), group.partial=c("disc3~1"), sample.nobs = 211,  estimator = "MLR", std.lv=TRUE)
+anova(strong.invariance2, weak.invariance)
+summary(strong.invariance, fit.measures = TRUE)
+
+#strict.invariance <- cfa(altgroups.model, data=ardraw2, group = "disability_status", group.equal = c( "loadings", "intercepts", "residuals"), group.partial=c("disc3~1"))
+#anova(strong.invariance, strict.invariance)
+
+fit.stats <- rbind(fit.stats, fitmeasures(strong.invariance, fit.measures = c("chisq", "df", "rmsea", "tli", "cfi", "aic")), fitmeasures(strong.invariance2, fit.measures = c("chisq", "df", "rmsea", "tli", "cfi", "aic")))
+rownames(fit.stats)[3:4] <- c("strong", "strong w disc3")
+round(fit.stats, 3)
+
+
+
+
+
+# descriptives for final subscales by group  ####
+#recalculate means w/ final items
+aut2 <- dplyr::select(ardraw2, aut2, aut3, aut5, aut6)
+rel2 <- dplyr::select(ardraw2, rel2, rel3, rel4, rel6)
+com2 <- dplyr::select(ardraw2, com1, com2, com3, com4)
+pac2 <- dplyr::select(ardraw2, trans_pac1, trans_pac2, trans_pac3, trans_pac4)
+gse2 <- dplyr::select(ardraw2, gse1, gse2, gse3, gse4)
+discr2 <- dplyr::select(ardraw2, disc1, disc2, disc3, disc4)
+ardraw2$autmean <- rowMeans(aut2, na.rm = TRUE)
+ardraw2$relmean <- rowMeans(rel2, na.rm = TRUE)
+ardraw2$commean <- rowMeans(com2, na.rm = TRUE)
+ardraw2$pacmean <- rowMeans(pac2, na.rm = TRUE)
+ardraw2$gsemean <- rowMeans(gse2, na.rm = TRUE)
+ardraw2$discrmean <- rowMeans(discr2, na.rm = TRUE)
+ardraw.dis <- ardraw2[ardraw2$disability_status ==1]
+ardraw.nondis <- ardraw2[ardraw2$disability_status ==0]
+
+scalemeans.dis<- dplyr::select(ardraw.dis, disability_status, autmean, relmean, commean, pacmean, gsemean, discrmean)
+scalemeans.nondis <- dplyr::select(ardraw.nondis, disability_status, autmean, relmean, commean, pacmean, gsemean, discrmean)
+
+
+autmean.dis <- mean(scalemeans.dis$autmean, na.rm = TRUE)
+relmean.dis <- mean(scalemeans.dis$relmean, na.rm = TRUE)
+commean.dis <- mean(scalemeans.dis$commean, na.rm = TRUE)
+pacmean.dis <- mean(scalemeans.dis$pacmean, na.rm = TRUE)
+gsemean.dis <- mean(scalemeans.dis$gsemean, na.rm = TRUE)
+discrmean.dis <- mean(scalemeans.dis$discrmean, na.rm = TRUE)
+
+descriptives.dis <- rbind(autmean.dis, relmean.dis, commean.dis, pacmean.dis, gsemean.dis, discrmean.dis)
+
+autsd.dis <- sd(scalemeans.dis$autmean, na.rm = TRUE)
+relsd.dis <- sd(scalemeans.dis$relmean, na.rm = TRUE)
+comsd.dis <- sd(scalemeans.dis$commean, na.rm = TRUE)
+pacsd.dis <- sd(scalemeans.dis$pacmean, na.rm = TRUE)
+gsesd.dis <- sd(scalemeans.dis$gsemean, na.rm = TRUE)
+discrsd.dis <- sd(scalemeans.dis$discrmean, na.rm = TRUE)
+
+descr.dis.sd <- rbind(autsd.dis, relsd.dis, comsd.dis, pacsd.dis, gsesd.dis, discrsd.dis)
+
+autmean.nondis <- mean(scalemeans.nondis$autmean, na.rm = TRUE)
+relmean.nondis <- mean(scalemeans.nondis$relmean, na.rm = TRUE)
+commean.nondis <- mean(scalemeans.nondis$commean, na.rm = TRUE)
+pacmean.nondis <- mean(scalemeans.nondis$pacmean, na.rm = TRUE)
+gsemean.nondis <- mean(scalemeans.nondis$gsemean, na.rm = TRUE)
+nondiscrmean.nondis <- mean(scalemeans.nondis$discrmean, na.rm = TRUE)
+descriptives.nondis <- rbind(autmean.nondis, relmean.nondis, commean.nondis, pacmean.nondis, gsemean.nondis, nondiscrmean.nondis)
+
+
+autsd.nondis <- sd(scalemeans.nondis$autmean, na.rm = TRUE)
+relsd.nondis <- sd(scalemeans.nondis$relmean, na.rm = TRUE)
+comsd.nondis <- sd(scalemeans.nondis$commean, na.rm = TRUE)
+pacsd.nondis <- sd(scalemeans.nondis$pacmean, na.rm = TRUE)
+gsesd.nondis <- sd(scalemeans.nondis$gsemean, na.rm = TRUE)
+discrsd.nondis <- sd(scalemeans.nondis$discrmean, na.rm = TRUE)
+
+descr.nondis.sd <- rbind(autsd.nondis, relsd.nondis, comsd.nondis, pacsd.nondis, gsesd.nondis, discrsd.nondis)
+
+# bind all descriptives together 
+descriptives <- cbind(descriptives.dis, descr.dis.sd, descriptives.nondis, descr.nondis.sd)
+descriptives
 
 

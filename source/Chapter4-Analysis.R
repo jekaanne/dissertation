@@ -1,7 +1,7 @@
-library(here)
-library(data.table)
-library(sjPlot)
-library(tidyverse)
+library(here) #Sets working directory
+library(renv) #Package management by RStudio
+library(data.table) #Smart data frames
+library(tidyverse) #Packages for tidy data
 library(ggpubr)
 library(rstatix)
 library(gvlma)
@@ -10,22 +10,25 @@ library(EnvStats)
 library(VIF)
 library(coin)
 library(psych)
-library(apaTables)
+library(sjPlot)
 # demographic tables ####
-colstable <- data.table(variables = c("Female", "Male", "Not specified", "Non-white", "White", "Advanced degree","College", "High school or less", "<5,000", "5,000 - 12,000", "12,000 - 25,000", "25,000 - 50,000", "50,000-100,000", "100,000+", "Full Time", "Part time", "Unemployed", "Missing"))
-demotable1<-table(travel_diary$gender, travel_diary$disability_status)
-demotable2<-table(travel_diary$white, travel_diary$disability_status)
-demotable3<-table(travel_diary$education, travel_diary$disability_status)
-demotable4<-table(travel_diary$employed, travel_diary$disability_status)
-demotable5<-table(travel_diary$income_range, travel_diary$disability_status)
-demotable<- data.table(rbind(demotable1, demotable2, demotable3, demotable4, demotable5))
-#create proportions of rows - change margins = 2 if column proportions are preferred
-demo_proportions <- prop.table(as.matrix(demotable), margin=1)*100
-#combine variables with individual contingency tables
-democomplete <- cbind(colstable, demotable, round(demo_proportions, 1))
+getTable1Stats <- function(x, digits = 0, prop_fn = describeProp, total_col_show_perc = TRUE){
+  getDescriptionStatsBy(x = x, by = travel_diary$disability_status)
+}
 
-print(democomplete) %>% 
-  kable(digits = 3, format="pandoc", caption="demographics 1")
+t1 <- list()
+t1[["Gender"]] <- getTable1Stats(travel_diary$gender)
+t1[["Race/Ethnicity"]] <- getTable1Stats(travel_diary$white)
+t1[["Education"]] <- getTable1Stats(travel_diary$education)
+t1[["Income Range"]] <- getTable1Stats(travel_diary$income_range)
+t1[["Full Time"]] <- table(travel_diary$emp_ft, travel_diary$disability_status)
+t1[["Part Time"]] <- table(travel_diary$emp_pt, travel_diary$disability_status)
+t1[["Self-Employed"]] <- table(travel_diary$emp_self, travel_diary$disability_status)
+t1[["Student"]] <- table(travel_diary$emp_student, travel_diary$disability_status)
+t1[["Unemployed"]] <- table(travel_diary$emp_unemp, travel_diary$disability_status)
+t1[["Retired"]] <- table(travel_diary$emp_retired, travel_diary$disability_status)
+mergeDesc(t1, htmlTable_args = list(caption  = "Participant demographic profiles"))
+
 
 discolstable2 <- data.table(variables = c("Seeing", "Hearing", "Walking", "Remembering or Concentrating", "Self-Care", "Communicating", "Severe Depression", "Severe Anxiety", "Severe Pain", "Severe Fatigue"))
 distype2table1<-table(travel_diary$bdis_seeing)
@@ -66,8 +69,9 @@ hist(tdvars$avg.obsdelaysperday)
 shapiro_test(tdvars$avg.obsdelaysperday)
 
 # correlation matrix #
-td.correlates <- dplyr::select(travel_diary, disability_status, avg.obsperday, avg.delaysperday, besttripmood.m, worsttripmood.m, ttbpnmean, altbpnfmean, flourmean, loghhincome,)
-tab_corr(td.correlates)
+td.correlates <- dplyr::select(travel_diary, disabled, avg.obsperday, avg.delaysperday, besttripmood.m, worsttripmood.m, ttbpnmean, altbpnfmean, flourmean, loghhincome,)
+sjPlot::tab_corr(td.correlates, na.deletion = c("listwise"),
+                 corr.method = c("spearman"),)
 
 # RQ1a: Do people with disabilities encounter more obstacles and delays than people without disabilities? ####
 # Diff in avg. obstacles per day 
