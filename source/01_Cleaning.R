@@ -20,6 +20,9 @@ ardraw$communicate[ardraw$disability_status == "Nondisabled"] = NA
 ttbpn <- dplyr::select(ardraw, aut3,  aut4, aut5, aut6, rel1, rel2, rel3, rel4, com1, com2, com3, com6)
 ardraw$ttbpnmean <- rowMeans(ttbpn, na.rm = TRUE)
 
+#convert age to age ranges
+ardraw$age_ranges<-cut(ardraw$age, breaks=c(18,36,51,65, Inf), labels = c("18-35", "36-50", "51-65", "65+"), include.lowest = TRUE, ordered_result = TRUE)
+
 # survey 2 cleaning ###
 # create binary disability status variable
 ardraw2$disability_status[is.na(ardraw2$global_disability)] = 0
@@ -64,11 +67,11 @@ ardraw2$ss_status[ardraw2$ssdi == 1] = 1
 ardraw2$ss_status[is.na(ardraw2$ss_status)] = 0
 
 #convert age to age ranges
-ardraw2$age_ranges<-cut(ardraw2$age, breaks=c(0,18,36,51,65), labels = c("18-35", "36-50", "51-65", "65+"))
+ardraw2$age_ranges<-cut(ardraw2$age, breaks=c(18,36,51,65, Inf), labels = c("18-35", "36-50", "51-65", "65+"), ordered_result = TRUE, include.lowest = TRUE)
 # survey 2 cleaning ##
 #calculate income groups
 ardraw2$hhincome <- as.numeric(ardraw2$hhincome)
-ardraw2$income_range <- cut(ardraw2$hhincome, breaks=c(0,10000,30000,70000,100000),labels = c("<10,000","10,000-30,000", "30,000 - 70,000", "100,000+"), include.lowest = TRUE, ordered_result = TRUE)
+ardraw2$income_range <- cut(ardraw2$hhincome, breaks=c(10000,30000,70000,100000, Inf),labels = c("<10,000","10,000-30,000", "30,000 - 70,000", "100,000+"), include.lowest = TRUE, ordered_result = TRUE)
 ardraw2$income_range <- as.character(ardraw2$income_range)
 ardraw2$income_range[is.na(ardraw2$income_range)] <- "Not specified"
 ardraw2$income_range <- as.factor(ardraw2$income_range)
@@ -216,7 +219,21 @@ ardraw2 <- ardraw2 %>% dplyr::mutate(education = recode_factor(education, `1` = 
 ardraw <- data.table(ardraw)
 ardraw2 <- data.table(ardraw2)
 
+# subscale means for all
+aut2 <- dplyr::select(ardraw2, aut1, aut2, aut3, aut4, aut5, aut6)
+rel2 <- dplyr::select(ardraw2, rel1, rel2, rel3, rel4, rel5, rel6)
+com2 <- dplyr::select(ardraw2, com1, com2, com3, com4)
+pac2 <- dplyr::select(ardraw2, trans_pac1, trans_pac2, trans_pac3, trans_pac4)
+gse2 <- dplyr::select(ardraw2, gse1, gse2, gse3, gse4)
+disc2 <- dplyr::select(ardraw2, disc1, disc2, disc3, disc4)
+altbpnf2 <-  dplyr::select(ardraw2, trans_pac1, trans_pac2, trans_pac3, trans_pac4, gse1, gse2, gse3, gse4,  disc1, disc2, disc3, disc4)
 
+ardraw2$autmean <- rowMeans(aut2, na.rm = TRUE)
+ardraw2$relmean <- rowMeans(rel2, na.rm = TRUE)
+ardraw2$commean <- rowMeans(com2, na.rm = TRUE)
+ardraw2$pacmean <- rowMeans(pac2, na.rm = TRUE)
+ardraw2$gsemean <- rowMeans(gse2, na.rm = TRUE)
+ardraw2$discmean <- rowMeans(disc2, na.rm = TRUE)
 
 # Chapter 4 ####
 travel_diary <- fread("data/Travel-Diary-Survey.csv", na.strings = c("",NA))
@@ -251,7 +268,8 @@ travel_diary$disabled[is.na(travel_diary$global_disability)] <- NA
 travel_diary$disabled[travel_diary$global_disability == 1] = 0
 travel_diary$disabled[travel_diary$global_disability == 2 | travel_diary$global_disability == 3] = 1
 # remove disability status = NA
-travel_diary <- travel_diary[!is.na(travel_diary$disability_status)]
+travel_diary <- travel_diary[!is.na(travel_diary$disabled)]
+travel_diary <- travel_diary %>% dplyr::mutate(disabled = recode_factor(disabled, `1` = "Disabled", `0` = "Nondisabled", .default = "NA"))
 
 travel_diary$trips <- as.numeric(travel_diary$trips)
 travel_diary$od_total <- as.numeric(travel_diary$od_total)
@@ -292,11 +310,11 @@ travel_diary$ss_status[travel_diary$ssdi == 1] = 1
 travel_diary$ss_status[is.na(travel_diary$ss_status)] = 0
 
 #convert age to age ranges
-travel_diary$age_ranges<-cut(travel_diary$age, breaks=c(0,18,36,51,65), labels = c("18-35", "36-50", "51-65", "65+"))
+travel_diary$age_ranges<-cut(travel_diary$age, breaks=c(18,36,51,65, Inf), labels = c("18-35", "36-50", "51-65", "65+"), ordered_result = TRUE, include.lowest = TRUE)
 # survey 2 cleaning ##
 #calculate income groups
 travel_diary$hhincome <- as.numeric(travel_diary$hhincome)
-travel_diary$income_range <- cut(travel_diary$hhincome, breaks=c(0,10000,30000,70000,100000),labels = c("<10,000","10,000-30,000", "30,000 - 70,000", "100,000+"), include.lowest = TRUE, ordered_result = TRUE)
+travel_diary$income_range <- cut(travel_diary$hhincome, breaks=c(10000,30000,70000,100000, Inf),labels = c("<10,000","10,000-30,000", "30,000 - 70,000", "100,000+"), include.lowest = TRUE, ordered_result = TRUE)
 travel_diary$income_range <- as.character(travel_diary$income_range)
 travel_diary$income_range[is.na(travel_diary$income_range)] <- "Not specified"
 travel_diary$income_range <- as.factor(travel_diary$income_range)

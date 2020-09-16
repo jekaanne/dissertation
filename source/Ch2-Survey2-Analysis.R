@@ -2,20 +2,26 @@ library(here) #Sets working directory
 library(renv) #Package management by RStudio
 library(data.table) #Smart data frames
 library(tidyverse) #Packages for tidy data
+library(Gmisc) #Descriptive statistics tables
 library(sjPlot) #Spearman correlation matrix function 
-library(xtable)
-library(pander)
-library(rmarkdown)
-library(kableExtra)
-library(Matrix)
+library(rmarkdown) #Dynamic document creator
+library(pander) #Pandoc writer
+library(broom) #Tidy up statistical objects
+library(kableExtra) #For complex tables
+library(Matrix) #Various matrix options
+library(car) #Companion to Applied Regression book (ncvTest)
+library(psych) #Basic data functions
+#Confirmatory Fcctor Analysis
+library(MVN) #Test for multivariate normality
+library(ICS) #Tools for exploring multivariate data
 library(lavaan) #LAtent VAriable ANalysis
-library(pander)
-library(psych)
-library(semPlot)
-library(semTools)
-library(coefficientalpha)
+library(semTools) #Tools for SEM
+library(semPlot) #Plot SEM models
+library(MASS) #Support functions for lme and mediation packages
+library(Hmisc) #Functions for data analysis, graphics, utility operations, functions for computing sample size and power
+
 # Demographic Data Tables ####
-#create contingency tables for each variable and combine 
+# Table 7 demographic profiles
 htmlTable::setHtmlTableTheme(css.rgroup = "")
 label(ardraw2$gender) <- "Gender"
 label(ardraw2$white) <- "Race/Ethnicity"
@@ -52,40 +58,27 @@ ardraw2factors <- dplyr::select(ardraw2, aut1, aut2, aut3, aut4, aut5, aut6,
                  com1, com2, com3, com4,
                  trans_pac1, trans_pac2, trans_pac3, trans_pac4, 
                  gse1, gse2, gse3, gse4,  
-                 discr1, discr2, discr3, discr4)
-#complete cases? 
+                 disc1, disc2, disc3, disc4)
 ttbpn2 <- dplyr::select(ardraw2, aut1, aut2, aut3, aut4, aut5, aut6, 
                  rel1, rel2, rel3, rel4, rel5, rel6,
                  com1, com2, com3, com4)
-#construct validity for correlations
-apa.cor.table(ttbpn2, filename = "discard", table.number = 1, show.conf.interval = TRUE, landscape = FALSE)
-
 aut2 <- dplyr::select(ardraw2factors, aut1, aut2, aut3, aut4, aut5, aut6)
 rel2 <- dplyr::select(ardraw2factors, rel1, rel2, rel3, rel4, rel5, rel6)
 com2 <- dplyr::select(ardraw2factors, com1, com2, com3, com4)
 pac2 <- dplyr::select(ardraw2factors, trans_pac1, trans_pac2, trans_pac3, trans_pac4)
 gse2 <- dplyr::select(ardraw2factors, gse1, gse2, gse3, gse4)
-discr <- dplyr::select(ardraw2factors, discr1, discr2, discr3, discr4)
-altbpnf2 <-  dplyr::select(ardraw2factors, trans_pac1, trans_pac2, trans_pac3, trans_pac4, gse1, gse2, gse3, gse4,  discr1, discr2, discr3, discr4)
-
-# mean-score-calculations removing missing values for TTBPN and BPNF subscales
-ardraw2factors$autmean <- rowMeans(aut2, na.rm = TRUE)
-ardraw2factors$relmean <- rowMeans(rel2, na.rm = TRUE)
-ardraw2factors$commean <- rowMeans(com2, na.rm = TRUE)
-ardraw2factors$pacmean <- rowMeans(pac2, na.rm = TRUE)
-ardraw2factors$gsemean <- rowMeans(gse2, na.rm = TRUE)
-ardraw2factors$discrmean <- rowMeans(discr2, na.rm = TRUE)
+disc2 <- dplyr::select(ardraw2factors, disc1, disc2, disc3, disc4)
+altbpnf2 <-  dplyr::select(ardraw2factors, trans_pac1, trans_pac2, trans_pac3, trans_pac4, gse1, gse2, gse3, gse4,  disc1, disc2, disc3, disc4)
 
 # scale means for correlation table
-subscale_means2 <- select(ardraw2factors, autmean, relmean, commean, pacmean, discrmean, gsemean)
+subscale_means2 <- select(ardraw2, autmean, relmean, commean, pacmean, discrmean, gsemean)
+
 #overall score correlation matrix
-matrix.subscales <- as.matrix(subscale_means)
-rcorr(matrix.subscales)
+tab_corr(subscale_means2, na.deletion = c("listwise"),
+         corr.method = c("spearman"),)
 
-
-# create descriptive table of items
+# Table 8-9 descriptive table of items
 psych::describe(ttbpn2)
-psych::describe(altbpnf2)
 psych::describe(pac2)
 psych::describe(gse2)
 psych::describe(discr2)
@@ -98,9 +91,6 @@ psych::alpha(gse2, use = "pairwise.complete.obs")
 psych::alpha(discr2, use = "pairwise.complete.obs")
 
 # assumptions/normality ####
-# univariate normality
-# boxplots
-#boxplot(ardraw2factors$ttbpnmean ~ ardraw2$disability_status, ylab#="Score", col=c("red", "blue"), main="Boxplot of scores in 3 groups")
 
 # checking for multivariate normal #
 mvn(ttbpn2, mvnTest = c("mardia"), covariance = TRUE, tol = 1e-25, alpha = 0.5, scale = FALSE, desc = TRUE, transform = "none", univariateTest = c("SW", "CVM", "Lillie", "SF", "AD"), univariatePlot = "none", multivariatePlot = "none",  multivariateOutlierMethod = "none", bc = FALSE, bcType = "rounded", showOutliers = TRUE, showNewData = TRUE)
@@ -110,8 +100,8 @@ result <- mvn(data = ttbpn, mvnTest = "royston", univariatePlot = "histogram")
 
 mvn(altbpnf2, mvnTest = c("mardia", "hz", "royston", "dh", "energy"), covariance = TRUE, tol = 1e-25, alpha = 0.5, scale = FALSE, desc = TRUE, transform = "none", univariateTest = c("SW", "CVM", "Lillie", "SF", "AD"), univariatePlot = "none", multivariatePlot = "none",  multivariateOutlierMethod = "none", bc = FALSE, bcType = "rounded", showOutliers = TRUE, showNewData = TRUE)
 
-# 3-factor TTBPN model baseline with Pairwise corrs ####
-cov.ttbpn2 <- cov(ttbpn2, use = "pairwise.complete.obs")
+# 3-factor TTBPN model baseline with FIML ####
+# Table 10a 
 threefactor2.cfa <- '
 aut=~aut1 + aut2+ aut3+ aut4+ aut5+ aut6
 rel=~rel1+  rel2+ rel3+ rel4+ rel5+ rel6 
@@ -123,37 +113,7 @@ aut~~rel
 aut~~com
 rel~~com
 '
-threefactor2.fit <- cfa(threefactor2.cfa, sample.cov = cov.ttbpn2, sample.nobs = 211, std.lv=FALSE)
-summary(threefactor2.fit, fit.measures=TRUE, rsquare=TRUE, standardized=TRUE, ci=TRUE)
-# check mindices for highly correlated items
-modificationindices(threefactor2.fit, sort=TRUE, minimum.value=3)
-# check loading factors on their own
-inspect(threefactor2.fit, what = "std")$lambda
-# check residuals (want value < .1)
-threefactor2.residuals <- resid(threefactor2.fit, type = "standardized")
-# covariance of residuals
-vcov(threefactor2.fit)
-# print Table of Factor loadings
-threefactor2param <- parameterEstimates(threefactor2.fit, standardized=TRUE) %>% 
-  filter(op == "=~") %>% 
-  select('Latent Factor'=lhs, Indicator=rhs, B=est, SE=se, Z=z, 'p-value'=pvalue, Beta=std.all) %>% 
-  kable(digits = 3, format="pandoc", caption="Factor Loadings")
-threefactor2param
-
-
-# 3-factor TTBPN model baseline with MLR ####
-threefactor2.cfa <- '
-aut=~aut1 + aut2+ aut3+ aut4+ aut5+ aut6
-rel=~rel1+  rel2+ rel3+ rel4+ rel5+ rel6 
-com=~com1+ com2+ com3+ com4
-aut~~aut
-rel~~rel
-com~~com
-aut~~rel
-aut~~com
-rel~~com
-'
-threefactor2.fit <- cfa(threefactor2.cfa, data = ardraw2)
+threefactor2.fit <- cfa(threefactor2.cfa, data = ardraw2, sample.nobs = 211, estimator = "MLR", missing = "FIML", std.lv=TRUE)
 # print summary w/ fit statistics
 summary(threefactor2.fit, fit.measures=TRUE, rsquare=TRUE, standardized=TRUE, ci=TRUE)
 # check mindices for highly correlated items
@@ -168,28 +128,20 @@ vcov(threefactor2.fit)
 threefactor2param <- parameterEstimates(threefactor2.fit, standardized=TRUE) %>% filter(op == "=~") %>% dplyr::select('Latent Factor'=lhs, Indicator=rhs, B=est, SE=se, Z=z, 'p-value'=pvalue, Beta=std.all) %>% kable(digits = 3, format="pandoc", caption="Factor Loadings")
 threefactor2param
 
-
-lavaanPlot(model = threefactor2.fit, node_options = list(shape = "box", fontname = "Helvetica"), edge_options = list(color = "grey"), coefs = TRUE, covs = TRUE, stars = TRUE)
-
-
-# *no discernible differences between pairwise and MLR methods*
-
 # 3- factor modified TTBPN model ####
 threefactor2mod.cfa <- '
 aut=~a*aut2 + b*aut3+ c*aut5+ d*aut6
 rel=~e*rel2 + f*rel3 + g*rel4+ h*rel6 
 com=~i*com1 + j*com2+ k*com3+ l*com4
-aut~~aut
-rel~~rel
-com~~com
 aut~~rel
 aut~~com
 rel~~com
 rel2~~rel3
 com3~~com4
 '
-threefactor2mod.fit <- cfa(threefactor2mod.cfa, data = ardraw2, sample.nobs = 211, estimator = "MLR", std.lv=TRUE)
+threefactor2mod.fit <- cfa(threefactor2mod.cfa, data = ardraw2, sample.nobs = 211, estimator = "MLR", missing = "FIML", std.lv=TRUE)
 # print summary w/ fit statistics
+# Table 13a
 summary(threefactor2mod.fit, fit.measures=TRUE, rsquare=TRUE, standardized=TRUE, ci=TRUE)
 # check mindices for highly correlated items
 modificationindices(threefactor2mod.fit, sort=TRUE, minimum.value=3)
@@ -199,24 +151,17 @@ inspect(threefactor2mod.fit, what = "std")$lambda
 threefactor2mod.residuals <- resid(threefactor2mod.fit, type = "standardized")
 # covariance of residuals
 vcov(threefactor2mod.residuals)
+
 # print Table of Factor loadings
-parameterEstimates(threefactor2mod.fit, ci = TRUE, remove.nonfree = TRUE,  standardized=TRUE) %>% 
-  filter(op == "=~") %>% 
-  dplyr::select('Indicator'=rhs, 
-         'Beta'=std.all,
-         'SE'=se, 'Z'=z, 
-         'CI.Lower'=ci.lower,
-         'CI.Upper'=ci.upper) %>% 
-  kable(digits = 3, format="pandoc", caption="Table X: Factor Loadings")
-#print diagram
-semPaths(threefactor2mod.fit, what="paths", whatLabels="par", rotation = 1, label.prop=1, edge.label.color = "black", edge.width = 0.25, shapeMan = "rectangle", shapeLat = "ellipse", sizeMan = 5, sizeLat = 5,  curve=2, edge.label.cex = 1)
-lavaanPlot(model = threefactor2mod.fit, node_options = list(shape = "box", fontname = "Helvetica"), edge_options = list(color = "grey"), coefs = TRUE, covs = TRUE, stars = TRUE)
+# Table 11
+parameterEstimates(threefactor2mod.fit, ci = TRUE, remove.nonfree = TRUE,  standardized=TRUE) %>%  filter(op == "=~") %>% dplyr::select('Indicator'=rhs, 'Beta'=std.all, 'SE'=se, 'Z'=z, 'CI.Lower'=ci.lower, 'CI.Upper'=ci.upper) %>% 
+kable(digits = 3, format="pandoc", caption="Table X: Factor Loadings")
 
-
-semPaths(threefactor2mod.fit, what="paths", whatLabels="par")
-
+# Figure 3 
+semPaths(threefactor2mod.fit, what="paths", whatLabels="par", rotation = 1, label.prop=1.75, edge.label.color = "black", edge.width = 1, shapeMan = "rectangle", shapeLat = "ellipse", sizeMan = 5, sizeLat = 5,  sizeLat2 = 5, sizeInt = 3, sizeInt2 = 3, curve=1, intercepts = TRUE, edge.label.cex = 1.75, cardinal = FALSE, style ="lisrel", residuals = TRUE, repulsion = .2, curvePivotShape = .5)
 
 # 3-factor ALT-bpnf model with other scales ####
+# Table 10b 
 alt.bpnf.threefactor2.cfa <- '
 pac=~a*trans_pac1 + b*trans_pac2 + c*trans_pac3 + d*trans_pac4
 gse=~e*gse1 +f*gse2 + f*gse3 +  h*gse4
@@ -225,8 +170,9 @@ pac~~gse
 pac~~discr
 gse~~discr
 '
-alt.bpnf.threefactor2.fit <- cfa(alt.bpnf.threefactor2.cfa, data = ardraw2, sample.nobs = 286, estimator = "MLR", std.lv=TRUE)
+alt.bpnf.threefactor2.fit <- cfa(alt.bpnf.threefactor2.cfa, data = ardraw2, sample.nobs = 211, estimator = "MLR", std.lv=TRUE)
 # print summary w/ fit statistics
+# Table 13b
 summary(alt.bpnf.threefactor2.fit, fit.measures=TRUE, rsquare=TRUE, standardized=TRUE, ci=TRUE)
 # check mindices for highly correlated items
 modificationindices(alt.bpnf.threefactor2.fit, sort=TRUE, minimum.value=3)
@@ -236,19 +182,12 @@ inspect(alt.bpnf.threefactor2.fit, what = "std")$lambda
 alt.bpnf.threefactor2.residuals <- resid(bpn.threefactor2.fit, type = "standardized")
 # covariance of residuals
 vcov(alt.bpnf.threefactor2.fit)
-# print Table of Factor loadings
-parameterEstimates(alt.bpnf.threefactor2.fit, ci = TRUE, remove.nonfree = TRUE,  standardized=TRUE) %>% 
-  filter(op == "=~") %>% 
-  dplyr::select('Indicator'=rhs, 
-         'Beta'=std.all,
-         'SE'=se, 'Z'=z, 
-         'CI.Lower'=ci.lower,
-         'CI.Upper'=ci.upper) %>% 
-  kable(digits = 3, format="pandoc", caption="Table X: Factor Loadings")
-semPaths(alt.bpnf.threefactor2.fit, what="paths", whatLabels="par", rotation = 1, label.prop=1, edge.label.color = "black", edge.width = 0.8, shapeMan = "rectangle", shapeLat = "ellipse", sizeMan = 10, sizeLat = 10,  curve=1.5,edge.label.cex = 1)
-lavaanPlot(model = alt.bpnf.threefactor2.fit, node_options = list(shape = "box", fontname = "Helvetica"), edge_options = list(color = "grey"), coefs = TRUE, covs = TRUE, stars = TRUE)
+# Table 11 print Table of Factor loadings
+parameterEstimates(alt.bpnf.threefactor2.fit, ci = TRUE, remove.nonfree = TRUE,  standardized=TRUE) %>% filter(op == "=~") %>%  dplyr::select('Indicator'=rhs, 'Beta'=std.all, 'SE'=se, 'Z'=z,  'CI.Lower'=ci.lower,'CI.Upper'=ci.upper) %>% 
+kable(digits = 3, format="pandoc", caption="Table X: Factor Loadings")
 
-
+# Figure 2
+semPaths(alt.bpnf.threefactor2.fit, what="paths", whatLabels="par", rotation = 1, label.prop=1.75, edge.label.color = "black", edge.width = 1, shapeMan = "rectangle", shapeLat = "ellipse", sizeMan = 5, sizeLat = 5,  sizeLat2 = 5, sizeInt = 3, sizeInt2 = 3, curve=.75, intercepts = TRUE, edge.label.cex = 1.75, cardinal = FALSE, style ="lisrel", residuals = TRUE, repulsion = .2, curvePivotShape = .5)
 
 # TTBPN scale validity measures####
 # TTBPN indicator and composite reliability #
@@ -476,9 +415,7 @@ htmt(alt.bpnf2.model, data = ardraw2, sample.cov = NULL, missing = "listwise", o
 
 
 # Measurement Invariance for TTBPN final model ####
-
-
-
+# Table 14
 # see https://rstudio-pubs-static.s3.amazonaws.com/194879_192b64ad567743d392b559d650b95a3b.html for instructions 
 fit.indices <- c("chisq", "df", "rmsea", "tli", "cfi", "aic")
 
@@ -495,39 +432,28 @@ aut2~~aut6
 aut3~~aut6
 '
 
-groups.baseline<-lavaan::cfa(groups.model, data=ardraw2, sample.nobs = 211, estimator = "MLR", std.lv=TRUE)
+groups.baseline<-lavaan::cfa(groups.model, data=ardraw2, sample.nobs = 211, estimator = "MLR", meanstructure = TRUE, std.lv=TRUE, missing = "FIML")
 
 fitMeasures(groups.baseline, fit.indices)
 modindices(groups.baseline, sort. = TRUE)
 
-configural <- cfa(groups.model, data=ardraw2, group = "disability_status", sample.nobs = 211, estimator = "MLR", std.lv=TRUE)
-fitMeasures(configural, fit.indices, )
-weak.invariance <- cfa(groups.model, data=ardraw2, group = "disability_status", group.equal = "loadings", sample.nobs = 211, estimator = "MLR", std.lv=TRUE)
+configural <- cfa(groups.model, data=ardraw2, group = "disability_status", sample.nobs = 211, estimator = "MLR", std.lv=TRUE, meanstructure = TRUE, missing = "FIML")
+fitMeasures(configural, fit.indices)
+weak.invariance <- cfa(groups.model, data=ardraw2, group = "disability_status", group.equal = "loadings", sample.nobs = 211, estimator = "MLR", std.lv=TRUE, meanstructure = TRUE, missing = "FIML")
 fitMeasures(weak.invariance,  fit.indices)
 
 anova(weak.invariance, configural)
 fit.stats <- rbind(fitmeasures(configural, fit.measures = c("chisq", "df", "rmsea", "tli", "cfi", "aic")), fitmeasures(weak.invariance, fit.measures = c("chisq", "df", "rmsea", "tli", "cfi", "aic")))
 rownames(fit.stats) <- c("configural", "weak invariance")
 fit.stats
-strong.invariance <- cfa(groups.model, data=ardraw2, group = "disability_status", group.equal = c( "loadings", "intercepts"), sample.nobs = 211,  estimator = "MLR", std.lv=TRUE)
+strong.invariance <- cfa(groups.model, data=ardraw2, group = "disability_status", group.equal = c( "loadings", "intercepts"), sample.nobs = 211,  estimator = "MLR", std.lv=TRUE, meanstructure = TRUE, missing = "FIML")
 summary(strong.invariance, fit.measures=TRUE, rsquare=TRUE, standardized=TRUE, ci=TRUE)
 
 anova(strong.invariance, weak.invariance)
 
-#partial invariance test
-#lavTestScore(strong.invariance)
-#partable.ttbpn <- parTable(strong.invariance)
-#strong.invariance2 <- cfa(groups.model, data=ardraw2, group = "disability_status", group.equal = c( "loadings", "intercepts"), group.partial=c("rel4~1"), sample.nobs = 211,  estimator = "MLR", std.lv=TRUE)
-#anova(strong.invariance2, weak.invariance)
-#summary(strong.invariance2, fit.measures = TRUE)
-
-#strict.invariance <- cfa(groups.model, data=ardraw2, group = "disability_status", group.equal = c( "loadings", "intercepts", "residuals"), group.partial=c("rel4~1"), sample.nobs = 211,  estimator = "MLR", std.lv=TRUE)
-#anova(strong.invariance2, strict.invariance)
-
 fit.stats <- rbind(fit.stats, fitmeasures(strong.invariance, fit.measures = c("chisq", "df", "rmsea", "tli", "cfi", "aic")))
 rownames(fit.stats)[3:3] <- c("strong")
 round(fit.stats, 3)
-
 
 # alt-bpn measurement invariance
 altgroups.model <- '
@@ -544,15 +470,15 @@ fitMeasures(altgroups.baseline, fit.indices)
 modindices(altgroups.baseline, sort. = TRUE)
 
 
-configural <- cfa(altgroups.model, data=ardraw2, group = "disability_status", sample.nobs = 211,  estimator = "MLR", std.lv=TRUE)
+configural <- cfa(altgroups.model, data=ardraw2, group = "disability_status", sample.nobs = 211,  estimator = "MLR", std.lv=TRUE, meanstructure = TRUE, missing = "FIML")
 fitMeasures(configural, fit.indices)
-weak.invariance <- cfa(altgroups.model, data=ardraw2, group = "disability_status", group.equal = "loadings", sample.nobs = 211,  estimator = "MLR", std.lv=TRUE)
+weak.invariance <- cfa(altgroups.model, data=ardraw2, group = "disability_status", group.equal = "loadings", sample.nobs = 211,  estimator = "MLR", std.lv=TRUE, meanstructure = TRUE, missing = "FIML")
 fitMeasures(weak.invariance,  fit.indices)
 anova(weak.invariance, configural)
 fit.stats <- rbind(fitmeasures(configural, fit.measures = c("chisq", "df", "rmsea", "tli", "cfi", "aic")), fitmeasures(weak.invariance, fit.measures = c("chisq", "df", "rmsea", "tli", "cfi", "aic")))
 rownames(fit.stats) <- c("configural", "weak invariance")
 fit.stats
-strong.invariance <- cfa(altgroups.model, data=ardraw2, group = "disability_status", group.equal = c( "loadings", "intercepts"), sample.nobs = 211,  estimator = "MLR", std.lv=TRUE)
+strong.invariance <- cfa(altgroups.model, data=ardraw2, group = "disability_status", group.equal = c( "loadings", "intercepts"), sample.nobs = 211,  estimator = "MLR", std.lv=TRUE, meanstructure = TRUE, missing = "FIML")
 summary(strong.invariance, fit.measures = TRUE)
 
 anova(strong.invariance, weak.invariance)
@@ -560,80 +486,10 @@ anova(strong.invariance, weak.invariance)
 #partial invariance test
 lavTestScore(strong.invariance)
 partable.alt <- parTable(strong.invariance)
-strong.invariance2 <- cfa(altgroups.model, data=ardraw2, group = "disability_status", group.equal = c( "loadings", "intercepts"), group.partial=c("disc3~1"), sample.nobs = 211,  estimator = "MLR", std.lv=TRUE)
+strong.invariance2 <- cfa(altgroups.model, data=ardraw2, group = "disability_status", group.equal = c( "loadings", "intercepts"), group.partial=c("disc3~1"), sample.nobs = 211,  estimator = "MLR", std.lv=TRUE, meanstructure = TRUE, missing = "FIML")
 anova(strong.invariance2, weak.invariance)
 summary(strong.invariance, fit.measures = TRUE)
-
-#strict.invariance <- cfa(altgroups.model, data=ardraw2, group = "disability_status", group.equal = c( "loadings", "intercepts", "residuals"), group.partial=c("disc3~1"))
-#anova(strong.invariance, strict.invariance)
 
 fit.stats <- rbind(fit.stats, fitmeasures(strong.invariance, fit.measures = c("chisq", "df", "rmsea", "tli", "cfi", "aic")), fitmeasures(strong.invariance2, fit.measures = c("chisq", "df", "rmsea", "tli", "cfi", "aic")))
 rownames(fit.stats)[3:4] <- c("strong", "strong w disc3")
 round(fit.stats, 3)
-
-
-
-
-
-# descriptives for final subscales by group  ####
-#recalculate means w/ final items
-aut2 <- dplyr::select(ardraw2, aut2, aut3, aut5, aut6)
-rel2 <- dplyr::select(ardraw2, rel2, rel3, rel4, rel6)
-com2 <- dplyr::select(ardraw2, com1, com2, com3, com4)
-pac2 <- dplyr::select(ardraw2, trans_pac1, trans_pac2, trans_pac3, trans_pac4)
-gse2 <- dplyr::select(ardraw2, gse1, gse2, gse3, gse4)
-discr2 <- dplyr::select(ardraw2, disc1, disc2, disc3, disc4)
-ardraw2$autmean <- rowMeans(aut2, na.rm = TRUE)
-ardraw2$relmean <- rowMeans(rel2, na.rm = TRUE)
-ardraw2$commean <- rowMeans(com2, na.rm = TRUE)
-ardraw2$pacmean <- rowMeans(pac2, na.rm = TRUE)
-ardraw2$gsemean <- rowMeans(gse2, na.rm = TRUE)
-ardraw2$discrmean <- rowMeans(discr2, na.rm = TRUE)
-ardraw.dis <- ardraw2[ardraw2$disability_status ==1]
-ardraw.nondis <- ardraw2[ardraw2$disability_status ==0]
-
-scalemeans.dis<- dplyr::select(ardraw.dis, disability_status, autmean, relmean, commean, pacmean, gsemean, discrmean)
-scalemeans.nondis <- dplyr::select(ardraw.nondis, disability_status, autmean, relmean, commean, pacmean, gsemean, discrmean)
-
-
-autmean.dis <- mean(scalemeans.dis$autmean, na.rm = TRUE)
-relmean.dis <- mean(scalemeans.dis$relmean, na.rm = TRUE)
-commean.dis <- mean(scalemeans.dis$commean, na.rm = TRUE)
-pacmean.dis <- mean(scalemeans.dis$pacmean, na.rm = TRUE)
-gsemean.dis <- mean(scalemeans.dis$gsemean, na.rm = TRUE)
-discrmean.dis <- mean(scalemeans.dis$discrmean, na.rm = TRUE)
-
-descriptives.dis <- rbind(autmean.dis, relmean.dis, commean.dis, pacmean.dis, gsemean.dis, discrmean.dis)
-
-autsd.dis <- sd(scalemeans.dis$autmean, na.rm = TRUE)
-relsd.dis <- sd(scalemeans.dis$relmean, na.rm = TRUE)
-comsd.dis <- sd(scalemeans.dis$commean, na.rm = TRUE)
-pacsd.dis <- sd(scalemeans.dis$pacmean, na.rm = TRUE)
-gsesd.dis <- sd(scalemeans.dis$gsemean, na.rm = TRUE)
-discrsd.dis <- sd(scalemeans.dis$discrmean, na.rm = TRUE)
-
-descr.dis.sd <- rbind(autsd.dis, relsd.dis, comsd.dis, pacsd.dis, gsesd.dis, discrsd.dis)
-
-autmean.nondis <- mean(scalemeans.nondis$autmean, na.rm = TRUE)
-relmean.nondis <- mean(scalemeans.nondis$relmean, na.rm = TRUE)
-commean.nondis <- mean(scalemeans.nondis$commean, na.rm = TRUE)
-pacmean.nondis <- mean(scalemeans.nondis$pacmean, na.rm = TRUE)
-gsemean.nondis <- mean(scalemeans.nondis$gsemean, na.rm = TRUE)
-nondiscrmean.nondis <- mean(scalemeans.nondis$discrmean, na.rm = TRUE)
-descriptives.nondis <- rbind(autmean.nondis, relmean.nondis, commean.nondis, pacmean.nondis, gsemean.nondis, nondiscrmean.nondis)
-
-
-autsd.nondis <- sd(scalemeans.nondis$autmean, na.rm = TRUE)
-relsd.nondis <- sd(scalemeans.nondis$relmean, na.rm = TRUE)
-comsd.nondis <- sd(scalemeans.nondis$commean, na.rm = TRUE)
-pacsd.nondis <- sd(scalemeans.nondis$pacmean, na.rm = TRUE)
-gsesd.nondis <- sd(scalemeans.nondis$gsemean, na.rm = TRUE)
-discrsd.nondis <- sd(scalemeans.nondis$discrmean, na.rm = TRUE)
-
-descr.nondis.sd <- rbind(autsd.nondis, relsd.nondis, comsd.nondis, pacsd.nondis, gsesd.nondis, discrsd.nondis)
-
-# bind all descriptives together 
-descriptives <- cbind(descriptives.dis, descr.dis.sd, descriptives.nondis, descr.nondis.sd)
-descriptives
-
-

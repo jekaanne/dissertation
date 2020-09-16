@@ -9,26 +9,27 @@ library(pander) #Pandoc writer
 library(broom) #Tidy up statistical objects
 library(kableExtra) #For complex tables
 library(Matrix) #Various matrix options
-library(ICS) 
 library(car) #Companion to Applied Regression book (ncvTest)
 library(psych) #Basic data functions
+#Confirmatory Fcctor Analysis
 library(MVN) #Test for multivariate normality
+library(ICS) #Tools for exploring multivariate data
 library(lavaan) #LAtent VAriable ANalysis
 library(semTools) #Tools for SEM
-#library(semPlot) #Plot SEM models
+library(semPlot) #Plot SEM models
 library(MASS) #Support functions for lme and mediation packages
 library(Hmisc) #Functions for data analysis, graphics, utility operations, functions for computing sample size and power
 
 
-
-
 # Demographic Data Tables ####
+# Table 1
 htmlTable::setHtmlTableTheme(css.rgroup = "")
 label(ardraw$gender) <- "Gender"
 label(ardraw$white) <- "Race/Ethnicity"
 label(ardraw$education) <- "Education"
 label(ardraw$income_range) <- "Income Range"
 label(ardraw$emp_status) <- "Employment Status"
+label(ardraw$age_ranges) <- "Age"
 getTable1Stats <- function(x, digits = 0, ...){
   getDescriptionStatsBy(x = x, by = ardraw$disability_status)
 }
@@ -38,25 +39,17 @@ t1[["Race/Ethnicity"]] <- getTable1Stats(ardraw$white)
 t1[["Education"]] <- getTable1Stats(ardraw$education)
 t1[["Income Range"]] <- getTable1Stats(ardraw$income_range)
 t1[["Employment Status"]] <- getTable1Stats(ardraw$emp_status)
+t1[["Age"]] <- getTable1Stats(ardraw$age_ranges)
 mergeDesc(t1, htmlTable_args = list(caption  = "Participant demographic profiles"))
 
-
 # create scale tables and calculate means ####
-ardrawfactors <- dplyr::select(ardraw, aut1, aut2, aut3, aut4, aut5, aut6, 
-                    rel1, rel2, rel3, rel4, rel5, rel6,
-                    com1, com2, com3, com4, com5, com6,
-                    aut_f1, aut_f2, aut_f3, aut_f4, 
-                    rel_f1, rel_f2, rel_f3, rel_f4, 
-                    com_f1, com_f2, com_f3, com_f4,
-                    )
+ardrawfactors <- dplyr::select(ardraw, aut1, aut2, aut3, aut4, aut5, aut6,rel1, rel2, rel3, rel4, rel5, rel6, com1, com2, com3, com4, com5, com6, aut_f1, aut_f2, aut_f3, aut_f4, rel_f1, rel_f2, rel_f3, rel_f4, com_f1, com_f2, com_f3, com_f4)
 # complete cases only
 ardrawfactors <- ardrawfactors[complete.cases(ardrawfactors),]
 # complete subscales survey 1
-ttbpn <- dplyr::select(ardrawfactors, aut1, aut2, aut3, aut4, aut5, aut6, 
-                    rel1, rel2, rel3, rel4, rel5, rel6,
-                    com1, com2, com3, com4, com5, com6)
+ttbpn <- dplyr::select(ardrawfactors, aut1, aut2, aut3, aut4, aut5, aut6,  rel1, rel2, rel3, rel4, rel5, rel6, com1, com2, com3, com4, com5, com6)
 aut <- dplyr::select(ardrawfactors, aut1, aut2, aut3, aut4, aut5, aut6)
-rel <- dplyr::select(ardrawfactors, rel1, rel2, rel3, rel4, rel5, rel6)
+rel <- dplyr::select(ardraw, rel1, rel2, rel3, rel4, rel5, rel6)
 com <- dplyr::select(ardrawfactors, com1, com2, com3, com4, com5, com6)
 bpnf <- dplyr::select(ardrawfactors, aut_f1, aut_f2, aut_f3, aut_f4, 
                 rel_f1, rel_f2, rel_f3, rel_f4, 
@@ -64,23 +57,12 @@ bpnf <- dplyr::select(ardrawfactors, aut_f1, aut_f2, aut_f3, aut_f4,
 autf <- dplyr::select(ardrawfactors, aut_f1, aut_f2, aut_f3, aut_f4)
 relf <- dplyr::select(ardrawfactors, rel_f1, rel_f2, rel_f3, rel_f4)
 comf <- dplyr::select(ardrawfactors, com_f1, com_f2, com_f3, com_f4)
-
-#altbpn measures
-altbpnfactors <- dplyr::select(ardraw, aut1, aut2, aut3, aut4, aut5, aut6, rel1, rel2, rel3, rel4, rel5, rel6,
-                        com1, com2, com3, com4, com5, com6,
-                        aut_f1, aut_f2, aut_f3, aut_f4, 
-                        rel_f1, rel_f2, rel_f3, rel_f4, 
-                        com_f1, com_f2, com_f3, com_f4, trans_pac1, trans_pac2, trans_pac3, trans_pac4, gse1, gse2, gse3, gse4,  dis_identity1, dis_identity2, dis_identity3, dis_identity4)
-# complete cases only
-altbpnfactors <- altbpnfactors[complete.cases(altbpnfactors),]
-
-
-
+flour <- dplyr::select(ardraw, flour1, flour2, flour3, flour4, flour5, flour6, flour7,flour8)
 
 # mean-score-calculations removing missing values for TTBPN and BPNF
 ardrawfactors$ttbpnmean <- rowMeans(ttbpn, na.rm = TRUE)
 ardrawfactors$autmean <- rowMeans(aut, na.rm = TRUE)
-ardrawfactors$relmean <- rowMeans(rel, na.rm = TRUE)
+ardraw$relmean <- rowMeans(rel, na.rm = TRUE)
 ardrawfactors$commean <- rowMeans(com, na.rm = TRUE)
 ardrawfactors$autfmean <- rowMeans(autf, na.rm = TRUE)
 ardrawfactors$relfmean <- rowMeans(relf, na.rm = TRUE)
@@ -89,27 +71,13 @@ ardrawfactors$bpnfmean <- rowMeans(bpnf, na.rm = TRUE)
 ardraw$flourmean <- rowMeans(flour, na.rm = TRUE)
 ardraw$ttbpnmean <- rowMeans(ttbpn, na.rm = TRUE)
 
-
-#alt-bpn complete cases only
-altbpnfactors <- altbpnfactors[complete.cases(altbpnfactors),]
-# mean-score-calcualtins removing missing values for ALT-BPNF
-altbpnfactors$autmean <- rowMeans(altaut, na.rm = TRUE)
-altbpnfactors$relmean <- rowMeans(altrel, na.rm = TRUE)
-altbpnfactors$commean <- rowMeans(altcom, na.rm = TRUE)
-altbpnfactors$autfmean <- rowMeans(altautf, na.rm = TRUE)
-altbpnfactors$relfmean <- rowMeans(altrelf, na.rm = TRUE)
-altbpnfactors$comfmean <- rowMeans(altcomf, na.rm = TRUE)
-altbpnfactors$bpnfmean <- rowMeans(bpnf, na.rm = TRUE)
-altbpnfactors$pacmean <- rowMeans(pac, na.rm = TRUE)
-altbpnfactors$gsemean <- rowMeans(gse, na.rm = TRUE)
-altbpnfactors$disidmean <- rowMeans(disid, na.rm = TRUE)
-
-# scale means for correlation table
+# Table 2 scale means for correlation table
 subscale_means <- altbpnfactors[, c("autmean", "relmean", "commean", "autfmean", "relfmean", "comfmean", "pacmean", "disidmean", "gsemean")]
 #overall score correlation matrix
 tab_corr(subscale_means, na.deletion = c("listwise"),
          corr.method = c("spearman"),)
-# create descriptive table of items
+
+# Table 3-4 descriptive statistics of individual scale items
 psych::describe(ttbpn)
 psych::describe(bpnf)
 psych::describe(pac)
@@ -181,30 +149,27 @@ rel2 ~~ rel4
 aut3 ~~ aut5
 com3 ~~ com6
 '
-threefactormod.fit <- cfa(threefactormod.cfa, data = ardraw, sample.nobs = 286, meanstructure = TRUE, estimator = "MLR", std.lv=TRUE)
+threefactormod.fit <- cfa(threefactormod.cfa, data = ardraw, sample.nobs = 286, estimator = "MLR", std.lv=TRUE)
 # print summary w/ fit statistics
 summary(threefactormod.fit, fit.measures=TRUE, rsquare=TRUE, standardized=TRUE, ci=TRUE)
-# check mindices for highly correlated items
-modificationindices(threefactormod.fit, sort=TRUE, minimum.value=3)
 # check loading factors on their own
 inspect(threefactormod.fit, what = "std")$lambda
 # check residuals (want value < .1)
 threefactormod.residuals <- resid(threefactormod.fit, type = "standardized")
 # covariance of residuals
 vcov(threefactormod.fit)
-# print Table of Factor loadings
+# Table 6 final model loadings
 parameterEstimates(threefactormod.fit, ci = TRUE, remove.nonfree = TRUE,  standardized=TRUE) %>% filter(op == "=~") %>% dplyr::select("Indicator"=rhs, "Beta"=std.all,"SE"=se, "Z"=z,  "CI.Lower"=ci.lower, "CI.Upper"=ci.upper) %>% kable(digits = 3, format="pandoc", caption="Table X: Factor Loadings")
-#print diagram
-semPaths(threefactormod.fit, what="paths", whatLabels="par", rotation = 1, label.prop=1.5, edge.label.color = "black", edge.width = 0.5, shapeMan = "rectangle", shapeLat = "ellipse", sizeMan = 5, sizeLat = 5,  sizeLat2 = 5, sizeInt = 3, sizeInt2 = 3, curve=1, intercepts = TRUE, edge.label.cex = 1.1, cardinal = FALSE, style ="mx", residuals = TRUE)
-lavaanPlot(model = threefactormod.fit, node_options = list(shape = "box", fontname = "Helvetica"), edge_options = list(color = "grey"), coefs = TRUE, covs = TRUE, stars = TRUE)
 
+# Figure 1 final model diagram
+# export as EPS and scale to 1200 px wide
+semPaths(threefactormod.fit, what="paths", whatLabels="par", rotation = 1, label.prop=1.75, edge.label.color = "black", edge.width = 1, shapeMan = "rectangle", shapeLat = "ellipse", sizeMan = 5, sizeLat = 5,  sizeLat2 = 5, sizeInt = 3, sizeInt2 = 3, curve=.75, intercepts = TRUE, edge.label.cex = 1.75, cardinal = FALSE, style ="lisrel", residuals = TRUE, repulsion = .2, curvePivotShape = .5)
 
 #chisq test of 1-factor model vs 3-factor model difference
 anova(onefactor.fit, threefactormod.fit)
 
 #chisq test of nested model difference
 anova(threefactormod.fit, threefactor.fit)
-
 
 # 1-factor BPNF model ####
 bpn.onefactor.cfa <- '
@@ -377,7 +342,3 @@ ttbpn.factors <- ardrawfactors[, c("autmean", "relmean", "commean")]
 corr.ttbpn <- cor(ttbpn.factors)
 sq.corr.ttbpn <- corr.ttbpn^2
 sq.corr.ttbpn
-
-
-
-
