@@ -198,13 +198,6 @@
       "Repository": "CRAN",
       "Hash": "84dffc44f23c419537c1c79cc46347a5"
     },
-    "VIF": {
-      "Package": "VIF",
-      "Version": "1.0",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Hash": "e318c95dbdfa394cd0aa9962793f198c"
-    },
     "VIM": {
       "Package": "VIM",
       "Version": "6.0.0",
@@ -372,13 +365,6 @@
       "Source": "Repository",
       "Repository": "CRAN",
       "Hash": "89cf4b8207269ccf82fbeb6473fd662b"
-    },
-    "coefficientalpha": {
-      "Package": "coefficientalpha",
-      "Version": "0.7",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Hash": "e57bc239b66c0f281b029017c5b37c20"
     },
     "coin": {
       "Package": "coin",
@@ -1443,13 +1429,6 @@
       "Source": "Repository",
       "Repository": "CRAN",
       "Hash": "09336b5ca5e99b7c2d0d5b2e344f3c76"
-    },
-    "rsem": {
-      "Package": "rsem",
-      "Version": "0.5.0",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Hash": "e5cb593f45e4927e5ae3c34437cf61bb"
     },
     "rstatix": {
       "Package": "rstatix",
